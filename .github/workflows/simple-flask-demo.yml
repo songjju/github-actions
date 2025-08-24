@@ -1,0 +1,52 @@
+name: simple flask app deploy
+run-name: ${{ github.actor }} simple flask app 🚀
+on: 
+    push:
+        branches: [flask-app]
+jobs:
+    build-and-test:
+        strategy:
+            matrix:
+                python-version: [3.9, 3.10, 3.11]
+        runs-on: ubuntu-latest
+        steps:
+            - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
+            - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
+            - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
+            - name: Checkout flask code
+              uses: actions/checkout@v4
+              with:
+                ref: flask-app
+                fetch-depth: 0
+            - name: Setup Python
+              uses: actions/setup-python@v5.1.0
+              with:
+                python-version: ${{ matrix.python-version }}
+            - name: Install dependencies
+              run: |
+                cd simple_flask
+                python -m pip install --upgrade pip
+                pip install -r requirements.txt
+                pip install flake8 pytest
+            - name: Lint with flake8
+              run: |
+                # stop the build if there are Python syntax errors or undefined names
+                flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+                # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+                flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+            - name: flask app test
+              working-directory: simple_flask
+              run: |
+                pytest --junitxml=pytest-results.xml
+            - name: Upload test results
+              uses: actions/upload-artifact@v4
+              with:
+                name: pytest-results
+                path: simple_flask/pytest-results.xml
+            - name: Cache pip
+              uses: actions/cache@v4
+              with:
+                path: ~/.cache/pip
+                key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+                restore-keys: |
+                    ${{ runner.os }}-pip-
