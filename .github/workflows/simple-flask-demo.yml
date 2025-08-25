@@ -15,6 +15,13 @@ jobs:
               with:
                 ref: flask-app
                 fetch-depth: 0
+            - name: Cache pip
+              uses: actions/cache@v4
+              with:
+                path: ~/.cache/pip
+                key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+                restore-keys: |
+                    ${{ runner.os }}-pip-
             - name: Setup Python
               uses: actions/setup-python@v5.1.0
               with:
@@ -39,10 +46,3 @@ jobs:
               with:
                 name: pytest-results
                 path: simple_flask/pytest-results.xml
-            - name: Cache pip
-              uses: actions/cache@v4
-              with:
-                path: ~/.cache/pip
-                key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-                restore-keys: |
-                    ${{ runner.os }}-pip-
