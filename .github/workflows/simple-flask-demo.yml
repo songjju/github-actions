@@ -4,45 +4,79 @@ on:
     push:
         branches: [flask-app]
 jobs:
-    build-and-test:
-        runs-on: ubuntu-22.04
-        steps:
-            - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-            - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-            - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-            - name: Checkout flask code
-              uses: actions/checkout@v4
-              with:
-                ref: flask-app
-                fetch-depth: 0
-            - name: Cache pip
-              uses: actions/cache@v4
-              with:
-                path: ~/.cache/pip
-                key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-                restore-keys: |
-                    ${{ runner.os }}-pip-
-            - name: Setup Python
-              uses: actions/setup-python@v5.1.0
-              with:
-                python-version: "3.10"
-            - name: Install dependencies
-              working-directory: simple_flask
-              run: |
-                python -m pip install --upgrade pip
-                pip install -r requirements.txt
-            - name: Lint with flake8
-              run: |
-                # stop the build if there are Python syntax errors or undefined names
-                flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-                # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-                flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-            - name: flask app test
-              working-directory: simple_flask
-              run: |
-                pytest --junitxml=pytest-results.xml
-            - name: Upload test results
-              uses: actions/upload-artifact@v4
-              with:
-                name: pytest-results
-                path: simple_flask/pytest-results.xml
+  build-and-test:
+      runs-on: ubuntu-22.04
+      steps:
+          - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
+          - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
+          - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
+          - name: Checkout flask code
+            uses: actions/checkout@v4
+            with:
+              ref: flask-app
+              fetch-depth: 0
+
+          - name: Cache pip
+            uses: actions/cache@v4
+            with:
+              path: ~/.cache/pip
+              key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+              restore-keys: |
+                  ${{ runner.os }}-pip-
+
+          - name: Setup Python
+            uses: actions/setup-python@v5.1.0
+            with:
+              python-version: "3.10"
+
+          - name: Install dependencies
+            working-directory: simple_flask
+            run: |
+              python -m pip install --upgrade pip
+              pip install -r requirements.txt
+
+          - name: Lint with flake8
+            run: |
+              # stop the build if there are Python syntax errors or undefined names
+              flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+              # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+              flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+          - name: flask app test
+            working-directory: simple_flask
+            run: |
+              pytest --junitxml=pytest-results.xml
+
+          - name: Upload test results
+            uses: actions/upload-artifact@v4
+            with:
+              name: pytest-results
+              path: simple_flask/pytest-results.xml
+  
+  Image-build:
+    needs: build-and-test
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout flask code
+        uses: actions/checkout@v4
+        with:
+          ref: flask-app
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITOPS_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: ./simple_flask
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/simple-flask-app:latest
+          file: ./simple_flask/Dockerfile
