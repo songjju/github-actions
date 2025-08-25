@@ -146,11 +146,29 @@ jobs:
           format: 'sarif'
           output: 'trivy-report.sarif'
 
-      - name: Upload Trivy scan results
+      - name: Run Trivy vulnerability scanner (SARIF)
+        uses: aquasecurity/trivy-action@master
+        if: github.event_name == 'push'  # Only run on push, not PR
+        with:
+          image-ref: ghcr.io/${{ github.repository_owner }}/simple-flask-app:${{ needs.build-and-test.outputs.version-tag }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+        continue-on-error: true
+
+      - name: Upload Trivy scan results to Security tab
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: github.event_name == 'push' && hashFiles('trivy-results.sarif') != ''
         with:
           sarif_file: 'trivy-results.sarif'
+        continue-on-error: true  # Don't fail if upload fails
+
+      - name: Upload Trivy results as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-security-scan-${{ needs.build-and-test.outputs.version-tag }}
+          path: trivy-results.sarif
+          retention-days: 30
 
   deploy:
     needs: [build-and-test, docker-build-and-push]
