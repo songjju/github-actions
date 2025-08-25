@@ -143,8 +143,9 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ghcr.io/${{ github.repository_owner }}/simple-flask-app:${{ needs.build-and-test.outputs.version-tag }}
-          format: 'sarif'
-          output: 'trivy-report.sarif'
+          format: 'table'
+          exit-code: '0'
+        continue-on-error: true
 
       - name: Run Trivy vulnerability scanner (SARIF)
         uses: aquasecurity/trivy-action@master
