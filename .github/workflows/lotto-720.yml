@@ -9,7 +9,7 @@ on:
 
 env:
   PYTHON_VERSION: "3.11"
-  WORKING_DIRECTORY: lotto_720
+  WORKING_DIRECTORY: "."
 
 jobs:
   build-and-test:
