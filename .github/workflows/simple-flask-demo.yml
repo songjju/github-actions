@@ -9,7 +9,7 @@ on:
 
 env:
   PYTHON_VERSION: "3.10"
-  WORKING_DIRECTORY: simple_flask
+  WORKING_DIRECTORY: "."
 
 jobs:
   build-and-test:
@@ -53,14 +53,12 @@ jobs:
               python-version: ${{ env.PYTHON_VERSION }}
 
           - name: Install dependencies
-            working-directory: ${{ env.WORKING_DIRECTORY }}
             run: |
               python -m pip install --upgrade pip
               pip install -r requirements.txt
               pip install flake8 safety bandit
 
           - name: Security vulnerability check
-            working-directory: ${{ env.WORKING_DIRECTORY }}
             run: |
               echo "🔍 Checking for security vulnerabilities in dependencies..."
               safety check --json --output safety-report.json || true
@@ -68,7 +66,6 @@ jobs:
             continue-on-error: true
 
           - name: Code quality check with flake8
-            working-directory: ${{ env.WORKING_DIRECTORY }}
             run: |
               echo "🧹 Running code quality checks..."
               # Stop the build if there are Python syntax errors or undefined names
@@ -77,7 +74,6 @@ jobs:
               flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
           - name: Run tests
-            working-directory: ${{ env.WORKING_DIRECTORY }}
             run: |
               echo "🧪 Running tests..."
               pytest --junitxml=pytest-results.xml --cov=. --cov-report=xml --cov-report=html
@@ -130,8 +126,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
-          context: ./${{ env.WORKING_DIRECTORY }}
-          file: ./${{ env.WORKING_DIRECTORY }}/Dockerfile
+          context: ${{ env.WORKING_DIRECTORY }}
+          file: ${{ env.WORKING_DIRECTORY }}/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
