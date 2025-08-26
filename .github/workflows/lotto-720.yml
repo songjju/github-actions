@@ -47,7 +47,7 @@ jobs:
             ${{ runner.os }}-pip-
 
       - name: Setup Python
-        usess: actions/setup-python@v5.1.0
+        uses: actions/setup-python@v5.1.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
