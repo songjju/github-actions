@@ -53,6 +53,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          pwd
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install flake8 safety bandit
@@ -122,8 +123,8 @@ jobs:
       - name: Build and Push Docker image
         uses: docker/build-push-action@v4
         with:
-          context: ./${{ env.WORKING_DIRECTORY }}
-          file: ./${{ env.WORKING_DIRECTORY }}/Dockerfile
+          context: ${{ env.WORKING_DIRECTORY }}
+          file: ${{ env.WORKING_DIRECTORY }}/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
