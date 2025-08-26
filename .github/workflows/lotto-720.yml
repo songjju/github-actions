@@ -16,6 +16,7 @@ jobs:
     runs-on: ubuntu-22.04
     outputs:
       version-tag: ${{ steps.version.outputs.tag }}
+      
     steps:
       - name: Print job trigger information
         run: |
@@ -26,7 +27,6 @@ jobs:
       - name: Checkout lotto-720 code
         uses: actions/checkout@v4
         with:
-          path: .
           ref: lotto-720
           fetch-depth: 0
 
