@@ -145,7 +145,7 @@ jobs:
         uses: aquasecurity/trivy-action@master
         if: github.event_name == 'push'  # Only run on push, not PR
         with:
-          image-ref: ghcr.io/${{ github.repository_owner }}/simple-flask-app:${{ needs.build-and-test.outputs.version-tag }}
+          image-ref: ghcr.io/${{ github.repository_owner }}/lotto-720-predictor:${{ needs.build-and-test.outputs.version-tag }}
           format: 'sarif'
           output: 'trivy-results.sarif'
         continue-on-error: true
