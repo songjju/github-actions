@@ -1,6 +1,8 @@
 # 웹 프레임워크
 Flask==2.3.3
 flask-cors==4.0.0
+pytest==7.4.2
+pytest-cov==4.1.0
 
 # 데이터 분석
 numpy==1.24.3
