@@ -1,12 +1,15 @@
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, RandomForestClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler, RobustScaler
-from sklearn.metrics import mean_absolute_error, r2_score
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.preprocessing import StandardScaler, RobustScaler, LabelEncoder
+from sklearn.metrics import mean_absolute_error, r2_score, accuracy_score
 from collections import Counter
 import warnings
 from datetime import datetime
+import pickle
+import os
+
 warnings.filterwarnings('ignore')
 
 class LottoPredictor:
@@ -17,14 +20,23 @@ class LottoPredictor:
         self.scalers = {}
         self.feature_importance = {}
         self.is_trained = False
+        self.training_history = []
         
         print(f"LottoPredictor 초기화: 데이터 {len(self.data)}개")
         
+        # 자동으로 모델 학습 시도
+        if len(self.data) >= 10:
+            try:
+                self.train_models()
+            except Exception as e:
+                print(f"자동 학습 실패, 수동 학습 필요: {e}")
+        
     def _validate_data(self, data):
-        """데이터 유효성 검사 및 정리"""
+        """데이터 유효성 검사 및 정리 (강화된 버전)"""
         try:
-            if data is None:
-                return self._create_sample_data()
+            if data is None or (hasattr(data, 'empty') and data.empty):
+                print("데이터가 없어서 샘플 데이터를 생성합니다.")
+                return self._create_comprehensive_sample_data()
                 
             if isinstance(data, dict):
                 df = pd.DataFrame(data)
@@ -33,106 +45,180 @@ class LottoPredictor:
             else:
                 df = pd.DataFrame(data)
             
-            # 필수 컬럼 확인
+            # 필수 컬럼 확인 및 생성
             if 'number' not in df.columns:
-                return self._create_sample_data()
+                print("number 컬럼이 없어서 샘플 데이터를 생성합니다.")
+                return self._create_comprehensive_sample_data()
             
-            # number 컬럼을 문자열로 변환 후 숫자 확인
-            df['number'] = df['number'].astype(str)
+            # 데이터 타입 정리
+            df['number'] = df['number'].astype(str).str.zfill(6)
             df = df[df['number'].str.isdigit()]
             df['number'] = df['number'].astype(int)
             
-            # jo 컬럼이 없으면 생성
+            # jo 컬럼 생성 또는 검증
             if 'jo' not in df.columns:
                 df['jo'] = df['number'].astype(str).str[0].astype(int)
+            else:
+                df['jo'] = pd.to_numeric(df['jo'], errors='coerce').fillna(1).astype(int)
             
-            # draw_no 컬럼이 없으면 생성
+            # 유효한 조 번호만 유지 (1-5)
+            df = df[(df['jo'] >= 1) & (df['jo'] <= 5)]
+            
+            # draw_no 컬럼 생성 또는 검증
             if 'draw_no' not in df.columns:
                 df['draw_no'] = range(1, len(df) + 1)
             
-            if len(df) < 10:
-                print("데이터가 부족하여 샘플 데이터를 추가합니다.")
-                sample_df = self._create_sample_data()
+            # 날짜 컬럼 처리
+            if 'draw_date' in df.columns:
+                df['draw_date'] = pd.to_datetime(df['draw_date'], errors='coerce')
+            
+            # 데이터가 부족하면 샘플 데이터 추가
+            if len(df) < 30:
+                print(f"데이터가 부족합니다 ({len(df)}개). 샘플 데이터를 추가합니다.")
+                sample_df = self._create_comprehensive_sample_data()
+                max_draw_no = df['draw_no'].max() if len(df) > 0 else 0
+                sample_df['draw_no'] = sample_df['draw_no'] + max_draw_no
                 df = pd.concat([df, sample_df], ignore_index=True)
             
-            return df.reset_index(drop=True)
+            # 중복 제거 및 정렬
+            df = df.drop_duplicates(subset=['draw_no']).sort_values('draw_no').reset_index(drop=True)
+            
+            print(f"데이터 검증 완료: {len(df)}개 (조별 분포: {df['jo'].value_counts().to_dict()})")
+            return df
             
         except Exception as e:
             print(f"데이터 검증 실패: {e}")
-            return self._create_sample_data()
+            import traceback
+            traceback.print_exc()
+            return self._create_comprehensive_sample_data()
     
-    def _create_sample_data(self):
-        """샘플 데이터 생성"""
+    def _create_comprehensive_sample_data(self):
+        """포괄적인 샘플 데이터 생성"""
         np.random.seed(42)
-        sample_size = 50
+        sample_size = 80  # 충분한 학습 데이터
         
         sample_data = []
+        base_date = pd.Timestamp('2020-01-01')
+        
         for i in range(sample_size):
-            number = np.random.randint(100000, 600000)
+            # 조별 가중치 적용 (실제와 유사)
+            jo_weights = [0.15, 0.25, 0.20, 0.25, 0.15]
+            jo = np.random.choice([1, 2, 3, 4, 5], p=jo_weights)
+            
+            # 조에 맞는 번호 생성
+            if jo == 1:
+                number = np.random.randint(100000, 199999)
+            elif jo == 2:
+                number = np.random.randint(200000, 299999)
+            elif jo == 3:
+                number = np.random.randint(300000, 399999)
+            elif jo == 4:
+                number = np.random.randint(400000, 499999)
+            else:
+                number = np.random.randint(500000, 599999)
+            
+            # 시간적 패턴 추가 (주기성)
+            if i % 10 < 3:  # 30% 확률로 특정 패턴
+                number = number + (i % 1000)
+            
             sample_data.append({
-                'draw_no': i + 1,
-                'number': number,
-                'jo': int(str(number)[0])
+                'draw_no': i + 640,  # 현실적인 회차 번호
+                'draw_date': base_date + pd.Timedelta(weeks=i),
+                'number': str(number).zfill(6),
+                'jo': jo,
+                'bonus_number': str(np.random.randint(100000, 999999)).zfill(6)
             })
         
         df = pd.DataFrame(sample_data)
-        print(f"샘플 데이터 생성: {len(df)}개")
+        df['number'] = df['number'].astype(int)
+        print(f"포괄적인 샘플 데이터 생성: {len(df)}개")
         return df
         
     def extract_features(self, df):
-        """특징 추출"""
+        """고급 특징 추출"""
         try:
             features = pd.DataFrame(index=df.index)
             
-            # 기본 특징
+            # 기본 특징들
             df['number_str'] = df['number'].astype(str).str.zfill(6)
+            
+            # 각 자리수별 특징
             for i in range(6):
                 features[f'digit_{i}'] = df['number_str'].str[i].astype(int)
             
+            # 조 관련 특징
             features['jo'] = df['jo'].astype(int)
+            features['number_int'] = df['number'].astype(int)
             
-            # 조별 특징
+            # 수학적 특징들
+            digit_cols = [f'digit_{i}' for i in range(6)]
+            features['digit_sum'] = features[digit_cols].sum(axis=1)
+            features['digit_mean'] = features[digit_cols].mean(axis=1)
+            features['digit_std'] = features[digit_cols].std(axis=1).fillna(0)
+            features['digit_range'] = features[digit_cols].max(axis=1) - features[digit_cols].min(axis=1)
+            
+            # 홀수/짝수 분석
+            features['odd_count'] = sum(features[f'digit_{i}'] % 2 for i in range(6))
+            features['even_count'] = 6 - features['odd_count']
+            features['odd_ratio'] = features['odd_count'] / 6
+            
+            # 조별 패턴 분석
             for jo in range(1, 6):
-                jo_data = df[df['jo'] == jo]
+                jo_mask = df['jo'] == jo
+                jo_data = df[jo_mask]
+                
                 if len(jo_data) > 0:
-                    # 해당 조의 최근 출현 위치
-                    last_occurrence = jo_data.index[-1] if len(jo_data) > 0 else -1
-                    gap = len(df) - 1 - last_occurrence if last_occurrence >= 0 else len(df)
+                    # 해당 조의 최근 출현 간격
+                    last_idx = jo_data.index[-1] if len(jo_data) > 0 else -1
+                    gap = len(df) - 1 - last_idx if last_idx >= 0 else len(df)
                     features[f'jo_{jo}_gap'] = gap
                     
-                    # 조별 빈도
-                    features[f'jo_{jo}_freq'] = len(jo_data) / len(df)
+                    # 조별 출현 빈도
+                    features[f'jo_{jo}_freq'] = len(jo_data) / len(df) if len(df) > 0 else 0
+                    
+                    # 조별 평균 번호
+                    features[f'jo_{jo}_avg'] = jo_data['number'].mean() if len(jo_data) > 0 else 0
                 else:
                     features[f'jo_{jo}_gap'] = len(df)
                     features[f'jo_{jo}_freq'] = 0
+                    features[f'jo_{jo}_avg'] = 0
             
-            # 최근 패턴
-            for n in [5, 10]:
-                if len(df) >= n:
-                    recent = df.tail(n)
-                    recent_jos = recent['jo'].value_counts()
+            # 시계열 특징 (트렌드)
+            if 'draw_no' in df.columns:
+                features['draw_no'] = df['draw_no']
+                features['draw_no_norm'] = (df['draw_no'] - df['draw_no'].min()) / (df['draw_no'].max() - df['draw_no'].min() + 1)
+            
+            # 이동 평균 특징 (최근 패턴)
+            for window in [5, 10, 20]:
+                if len(df) >= window:
+                    features[f'ma_{window}_number'] = df['number'].rolling(window=window, min_periods=1).mean()
                     for jo in range(1, 6):
-                        features[f'recent_{n}_jo_{jo}'] = recent_jos.get(jo, 0) / n
+                        jo_recent = df['jo'].rolling(window=window, min_periods=1).apply(lambda x: (x == jo).mean())
+                        features[f'ma_{window}_jo_{jo}'] = jo_recent
                 else:
+                    features[f'ma_{window}_number'] = df['number']
                     for jo in range(1, 6):
-                        features[f'recent_{n}_jo_{jo}'] = 0
+                        features[f'ma_{window}_jo_{jo}'] = (df['jo'] == jo).astype(float)
             
-            # 수치적 특징
-            features['number_int'] = df['number'].astype(int)
-            features['number_sum'] = features[[f'digit_{i}' for i in range(6)]].sum(axis=1)
-            features['number_mean'] = features[[f'digit_{i}' for i in range(6)]].mean(axis=1)
+            # 연속성 특징
+            features['is_consecutive'] = 0
+            if len(df) > 1:
+                for i in range(1, len(df)):
+                    prev_digits = [int(d) for d in str(df.iloc[i-1]['number']).zfill(6)]
+                    curr_digits = [int(d) for d in str(df.iloc[i]['number']).zfill(6)]
+                    consecutive_count = sum(1 for j in range(5) if abs(curr_digits[j+1] - curr_digits[j]) == 1)
+                    features.iloc[i, features.columns.get_loc('is_consecutive')] = consecutive_count
             
-            # 패턴 특징
-            features['odd_count'] = sum(features[f'digit_{i}'] % 2 for i in range(6))
-            features['even_count'] = 6 - features['odd_count']
-            
-            # NaN 처리
+            # NaN 값 처리
             features = features.fillna(0)
+            
+            # 무한값 처리
+            features = features.replace([np.inf, -np.inf], 0)
             
             return features
             
         except Exception as e:
-            print(f"특징 추출 실패: {e}")
+            print(f"고급 특징 추출 실패: {e}")
             # 기본 특징만 반환
             basic_features = pd.DataFrame(index=df.index)
             basic_features['jo'] = df['jo'].astype(int)
@@ -140,285 +226,437 @@ class LottoPredictor:
             return basic_features.fillna(0)
         
     def prepare_training_data(self):
-        """학습 데이터 준비"""
+        """학습 데이터 준비 (개선된 버전)"""
         try:
+            print("학습 데이터 준비 중...")
+            
             if len(self.data) < 5:
-                print("Warning: 학습을 위한 데이터가 매우 부족합니다")
+                raise ValueError("학습을 위한 데이터가 너무 부족합니다")
                 
+            # 특징 추출
             features = self.extract_features(self.data)
             
-            # 타겟 변수
+            # 타겟 변수 생성
             targets = pd.DataFrame(index=self.data.index)
-            targets['next_number'] = self.data['number'].shift(-1).astype(float)
+            
+            # 다음 회차 번호 예측을 위한 타겟
+            targets['next_number'] = self.data['number'].shift(-1)
             targets['next_jo'] = self.data['jo'].shift(-1)
             
             # 마지막 행 제거 (타겟이 없음)
             features = features[:-1]
             targets = targets[:-1]
             
-            # NaN 제거
-            valid_idx = targets['next_number'].notna()
+            # 유효한 데이터만 사용
+            valid_idx = targets['next_number'].notna() & targets['next_jo'].notna()
             features = features[valid_idx]
             targets = targets[valid_idx]
             
+            if len(features) == 0:
+                raise ValueError("유효한 학습 데이터가 없습니다")
+            
             print(f"학습 데이터 준비 완료: {len(features)}개")
+            print(f"특징 수: {len(features.columns)}개")
+            
             return features, targets
             
         except Exception as e:
             print(f"학습 데이터 준비 실패: {e}")
+            import traceback
+            traceback.print_exc()
             return None, None
     
     def train_models(self):
-        """앙상블 모델 학습"""
+        """개선된 앙상블 모델 학습"""
         try:
-            print("모델 학습을 시작합니다...")
+            print("=== AI 모델 학습 시작 ===")
             
+            # 데이터 준비
             X, y = self.prepare_training_data()
             
-            if X is None or y is None or len(X) < 3:
-                print("학습 데이터 부족으로 간단한 모델만 생성합니다.")
+            if X is None or y is None or len(X) < 5:
+                print("학습 데이터 부족으로 기본 모델만 생성합니다.")
                 self._create_simple_model()
                 return
             
-            # 훈련/테스트 분할
-            if len(X) > 10:
-                test_size = 0.2
-            else:
-                test_size = 1  # 테스트 데이터 1개
-                
+            print(f"학습 데이터: {len(X)}개, 특징: {len(X.columns)}개")
+            
+            # 데이터 분할
+            test_size = min(0.3, max(0.1, 1.0 / len(X))) if len(X) > 10 else 0.2
             X_train, X_test, y_train, y_test = train_test_split(
-                X, y['next_number'], test_size=test_size, random_state=42
+                X, y['next_number'], test_size=test_size, random_state=42, shuffle=False
             )
+            
+            print(f"훈련 데이터: {len(X_train)}개, 테스트 데이터: {len(X_test)}개")
             
             # 스케일링
-            scaler_number = RobustScaler()
-            X_train_scaled = scaler_number.fit_transform(X_train)
-            X_test_scaled = scaler_number.transform(X_test)
+            scaler = RobustScaler()
+            X_train_scaled = scaler.fit_transform(X_train)
+            X_test_scaled = scaler.transform(X_test) if len(X_test) > 0 else X_train_scaled[:1]
             
-            # 모델 생성 (데이터 크기에 맞게 조정)
+            # 모델 파라미터 동적 조정
             n_samples = len(X_train)
+            n_features = len(X.columns)
             
-            rf_model = RandomForestRegressor(
-                n_estimators=min(50, max(10, n_samples)),
-                max_depth=min(8, max(3, n_samples // 3)),
-                min_samples_split=min(5, max(2, n_samples // 5)),
-                min_samples_leaf=1,
-                random_state=42,
-                n_jobs=1
-            )
+            # Random Forest 모델
+            rf_params = {
+                'n_estimators': min(100, max(20, n_samples * 2)),
+                'max_depth': min(15, max(5, n_samples // 3)),
+                'min_samples_split': min(10, max(2, n_samples // 10)),
+                'min_samples_leaf': min(5, max(1, n_samples // 20)),
+                'random_state': 42,
+                'n_jobs': -1
+            }
             
-            gb_model = GradientBoostingRegressor(
-                n_estimators=min(50, max(10, n_samples)),
-                learning_rate=0.1,
-                max_depth=min(5, max(2, n_samples // 5)),
-                subsample=0.8,
-                random_state=42
-            )
-            
-            # 학습
-            print(f"Random Forest 학습 중... (데이터: {len(X_train)}개)")
+            print(f"Random Forest 학습 중... (파라미터: {rf_params})")
+            rf_model = RandomForestRegressor(**rf_params)
             rf_model.fit(X_train_scaled, y_train)
             
-            print(f"Gradient Boosting 학습 중... (데이터: {len(X_train)}개)")
+            # Gradient Boosting 모델
+            gb_params = {
+                'n_estimators': min(80, max(10, n_samples)),
+                'learning_rate': 0.1,
+                'max_depth': min(8, max(3, n_samples // 5)),
+                'subsample': 0.8,
+                'random_state': 42
+            }
+            
+            print(f"Gradient Boosting 학습 중... (파라미터: {gb_params})")
+            gb_model = GradientBoostingRegressor(**gb_params)
             gb_model.fit(X_train_scaled, y_train)
             
-            # 예측 및 평가
+            # 조 예측 모델 (분류)
+            print("조 예측 모델 학습 중...")
+            jo_model = RandomForestClassifier(
+                n_estimators=min(50, max(10, n_samples)),
+                max_depth=min(10, max(3, n_samples // 5)),
+                random_state=42,
+                n_jobs=-1
+            )
+            jo_model.fit(X_train_scaled, y['next_jo'].iloc[:-len(X_test) if len(X_test) > 0 else 0])
+            
+            # 모델 성능 평가
             if len(X_test) > 0:
+                # 회귀 모델 평가
                 rf_pred = rf_model.predict(X_test_scaled)
                 gb_pred = gb_model.predict(X_test_scaled)
                 ensemble_pred = (rf_pred + gb_pred) / 2
                 
-                test_mae = mean_absolute_error(y_test, ensemble_pred)
+                mae = mean_absolute_error(y_test, ensemble_pred)
+                r2 = r2_score(y_test, ensemble_pred) if len(set(y_test)) > 1 else 0.0
                 
-                if np.var(y_test) > 0:
-                    test_r2 = r2_score(y_test, ensemble_pred)
-                else:
-                    test_r2 = 0.0
-                    
-                print(f"테스트 MAE: {test_mae:.2f}")
-                print(f"테스트 R2: {test_r2:.4f}")
+                print(f"모델 성능 - MAE: {mae:.2f}, R²: {r2:.4f}")
+                
+                # 조 예측 성능
+                if len(X_test) == len(y['next_jo'].iloc[-len(X_test):]):
+                    jo_pred = jo_model.predict(X_test_scaled)
+                    jo_actual = y['next_jo'].iloc[-len(X_test):].values
+                    jo_accuracy = accuracy_score(jo_actual, jo_pred)
+                    print(f"조 예측 정확도: {jo_accuracy:.4f}")
+                
+                # 교차 검증 (데이터가 충분한 경우)
+                if len(X_train) >= 10:
+                    cv_scores = cross_val_score(rf_model, X_train_scaled, y_train, cv=min(5, len(X_train)//2), scoring='neg_mean_absolute_error')
+                    print(f"교차 검증 MAE: {-cv_scores.mean():.2f} (±{cv_scores.std():.2f})")
             
-            # 특징 중요도
+            # 특징 중요도 분석
             if hasattr(rf_model, 'feature_importances_'):
-                self.feature_importance = dict(zip(X.columns, rf_model.feature_importances_))
+                feature_importance = dict(zip(X.columns, rf_model.feature_importances_))
+                # 상위 10개 특징만 저장
+                sorted_features = sorted(feature_importance.items(), key=lambda x: x[1], reverse=True)[:10]
+                self.feature_importance = dict(sorted_features)
+                print("주요 특징 중요도:")
+                for feature, importance in sorted_features[:5]:
+                    print(f"  {feature}: {importance:.4f}")
             
             # 모델 저장
-            self.models['rf'] = rf_model
-            self.models['gb'] = gb_model
-            self.scalers['number'] = scaler_number
-            
-            # 조 예측 모델
-            self._train_jo_model(X, y)
-            
+            self.models = {
+                'rf': rf_model,
+                'gb': gb_model,
+                'rf_jo': jo_model
+            }
+            self.scalers = {'number': scaler}
             self.is_trained = True
-            print("모델 학습 완료!")
+            
+            # 학습 이력 저장
+            self.training_history.append({
+                'timestamp': datetime.now(),
+                'data_size': len(X),
+                'features': len(X.columns),
+                'mae': mae if 'mae' in locals() else None,
+                'r2': r2 if 'r2' in locals() else None
+            })
+            
+            print("=== AI 모델 학습 완료! ===")
+            print(f"학습된 모델: {list(self.models.keys())}")
             
         except Exception as e:
             print(f"모델 학습 실패: {e}")
             import traceback
             traceback.print_exc()
+            print("기본 모델로 전환합니다.")
             self._create_simple_model()
-    
-    def _train_jo_model(self, X, y):
-        """조 예측 모델 학습"""
-        try:
-            X_jo = X.copy()
-            y_jo = y['next_jo'].copy()
-            
-            # 유효한 조 값만 사용
-            valid_jo_mask = y_jo.between(1, 5)
-            X_jo = X_jo[valid_jo_mask]
-            y_jo = y_jo[valid_jo_mask]
-            
-            if len(X_jo) < 3:
-                print("조 예측 모델을 위한 데이터 부족")
-                return
-            
-            unique_jos = y_jo.unique()
-            print(f"조 예측 모델 학습: {len(unique_jos)}개 클래스")
-            
-            rf_jo = RandomForestClassifier(
-                n_estimators=min(30, len(X_jo)),
-                max_depth=min(5, len(unique_jos) + 2),
-                random_state=42,
-                n_jobs=1
-            )
-            
-            rf_jo.fit(X_jo, y_jo)
-            
-            # 조 예측 정확도 확인
-            if len(X_jo) > 3:
-                jo_accuracy = rf_jo.score(X_jo, y_jo)
-                print(f"조 예측 정확도: {jo_accuracy:.4f}")
-            
-            self.models['rf_jo'] = rf_jo
-            
-        except Exception as e:
-            print(f"조 예측 모델 학습 실패: {e}")
     
     def _create_simple_model(self):
         """간단한 기본 모델 생성"""
-        print("간단한 기본 모델을 생성합니다.")
-        
-        # 최소한의 모델 생성
+        print("간단한 패턴 기반 모델을 생성합니다.")
         self.models['simple'] = True
         self.is_trained = True
     
     def predict_next(self):
-        """다음 회차 예측"""
+        """다음 회차 예측 (강화된 버전)"""
         try:
             if not self.is_trained:
-                print("No models trained, returning random prediction")
-                return self._generate_random_prediction()
+                print("모델이 학습되지 않았습니다. 학습을 시도합니다...")
+                self.train_models()
+                if not self.is_trained:
+                    return self._generate_random_prediction()
+            
+            print("=== AI 예측 수행 ===")
             
             # 간단한 모델인 경우
             if 'simple' in self.models:
                 return self._generate_pattern_prediction()
             
-            # ML 모델 예측
+            # AI 모델 예측
             return self._ml_predict()
             
         except Exception as e:
             print(f"예측 실행 실패: {e}")
+            import traceback
+            traceback.print_exc()
             return self._generate_random_prediction()
     
     def _ml_predict(self):
         """ML 모델을 사용한 예측"""
         try:
-            # 최근 데이터로 특징 생성
+            print("AI 모델로 예측 중...")
+            
+            # 최신 데이터로 특징 생성
+            if len(self.data) == 0:
+                raise ValueError("예측을 위한 데이터가 없습니다")
+                
             last_features = self.extract_features(self.data.tail(1))
             
-            predictions = {}
+            if len(last_features) == 0:
+                raise ValueError("특징 추출에 실패했습니다")
             
-            # 번호 예측
+            predictions = {}
+            confidence_scores = {}
+            
+            # 번호 예측 (앙상블)
             if 'rf' in self.models and 'gb' in self.models and 'number' in self.scalers:
+                # 스케일링
                 last_features_scaled = self.scalers['number'].transform(last_features)
                 
+                # 각 모델 예측
                 rf_pred = self.models['rf'].predict(last_features_scaled)[0]
                 gb_pred = self.models['gb'].predict(last_features_scaled)[0]
-                ensemble_pred = (rf_pred + gb_pred) / 2
                 
-                # 유효한 범위로 클리핑
+                # 앙상블 예측 (가중 평균)
+                ensemble_pred = rf_pred * 0.6 + gb_pred * 0.4
+                
+                # 유효한 범위로 조정
                 ensemble_pred = int(max(100000, min(999999, ensemble_pred)))
                 predictions['number'] = str(ensemble_pred).zfill(6)
+                
+                # 신뢰도 계산 (모델 간 일치도 기반)
+                diff_ratio = abs(rf_pred - gb_pred) / max(abs(rf_pred), abs(gb_pred), 1)
+                confidence_scores['number'] = max(50, 90 - diff_ratio * 40)
+                
+                print(f"번호 예측: {predictions['number']} (신뢰도: {confidence_scores['number']:.1f}%)")
             else:
+                # 모델이 없으면 패턴 기반
                 predictions['number'] = str(np.random.randint(100000, 999999)).zfill(6)
+                confidence_scores['number'] = 50.0
             
             # 조 예측
             if 'rf_jo' in self.models:
-                jo_pred = self.models['rf_jo'].predict(last_features)[0]
-                jo_probs = self.models['rf_jo'].predict_proba(last_features)[0]
-                jo_confidence = max(jo_probs) * 100
+                last_features_scaled = self.scalers['number'].transform(last_features)
+                jo_pred = self.models['rf_jo'].predict(last_features_scaled)[0]
+                jo_probs = self.models['rf_jo'].predict_proba(last_features_scaled)[0]
+                
                 predictions['jo'] = int(jo_pred)
+                confidence_scores['jo'] = max(jo_probs) * 100
+                
+                print(f"조 예측: {predictions['jo']}조 (신뢰도: {confidence_scores['jo']:.1f}%)")
             else:
-                # 가장 빈번한 조 또는 랜덤
-                jo_counts = self.data['jo'].value_counts()
-                predictions['jo'] = int(jo_counts.index[0]) if len(jo_counts) > 0 else np.random.randint(1, 6)
-                jo_confidence = 60.0
+                # 최근 패턴 기반 조 예측
+                recent_jos = self.data.tail(20)['jo'] if len(self.data) >= 20 else self.data['jo']
+                jo_counts = recent_jos.value_counts()
+                
+                # 가장 적게 나온 조 선택 (보정)
+                if len(jo_counts) > 0:
+                    least_common_jo = jo_counts.idxmin()
+                    predictions['jo'] = int(least_common_jo)
+                    confidence_scores['jo'] = 65.0
+                else:
+                    predictions['jo'] = int(predictions['number'][0])
+                    confidence_scores['jo'] = 50.0
             
-            # 패턴 기반 예측
-            pattern_predictions = self._pattern_based_predictions()
+            # 번호와 조 일치성 확인 및 보정
+            predicted_jo_from_number = int(predictions['number'][0])
+            if predicted_jo_from_number != predictions['jo']:
+                # 조에 맞게 번호 조정
+                base = predictions['jo'] * 100000
+                remainder = int(predictions['number']) % 100000
+                adjusted_number = base + remainder
+                predictions['number'] = str(adjusted_number).zfill(6)
+                print(f"번호-조 일치성 보정: {predictions['number']}")
             
-            # 결과 구성
+            # 패턴 기반 추가 예측
+            pattern_predictions = self._generate_pattern_predictions()
+            
+            # 전체 신뢰도 계산
+            overall_confidence = (confidence_scores.get('number', 50) + confidence_scores.get('jo', 50)) / 2
+            
             result = {
                 'next_draw_no': int(self.data['draw_no'].max()) + 1,
                 'ml_prediction': {
                     'jo': predictions['jo'],
                     'number': predictions['number'],
-                    'jo_confidence': round(jo_confidence, 2)
+                    'jo_confidence': round(confidence_scores.get('jo', 50), 2),
+                    'number_confidence': round(confidence_scores.get('number', 50), 2)
                 },
                 'pattern_predictions': pattern_predictions,
-                'confidence_score': self._calculate_confidence()
+                'confidence_score': round(overall_confidence, 2),
+                'model_type': 'AI_ML',
+                'features_used': len(last_features.columns)
             }
             
-            print(f"ML 예측 완료: {predictions['jo']}조 {predictions['number']}")
+            print(f"=== AI 예측 완료: {predictions['jo']}조 {predictions['number']} (신뢰도: {overall_confidence:.1f}%) ===")
             return result
             
         except Exception as e:
             print(f"ML 예측 실패: {e}")
-            return self._generate_random_prediction()
+            import traceback
+            traceback.print_exc()
+            return self._generate_pattern_prediction()
     
     def _generate_pattern_prediction(self):
-        """패턴 기반 예측"""
+        """패턴 기반 예측 (개선된 버전)"""
         try:
-            # 최근 조 분포 분석
-            recent_jos = self.data.tail(20)['jo'] if len(self.data) >= 20 else self.data['jo']
-            jo_counts = recent_jos.value_counts()
+            print("패턴 기반 예측 수행 중...")
+            
+            if len(self.data) == 0:
+                return self._generate_random_prediction()
+            
+            # 최근 20회차 데이터 분석
+            recent_data = self.data.tail(20) if len(self.data) >= 20 else self.data
+            jo_counts = recent_data['jo'].value_counts()
             
             # 가장 적게 나온 조 선택
             if len(jo_counts) > 0:
-                least_common_jo = jo_counts.idxmin()
+                predicted_jo = jo_counts.idxmin()
             else:
-                least_common_jo = np.random.randint(1, 6)
+                predicted_jo = np.random.randint(1, 6)
             
-            # 해당 조의 최근 번호들의 평균 사용
-            jo_numbers = self.data[self.data['jo'] == least_common_jo]['number']
+            # 해당 조의 번호 패턴 분석
+            jo_numbers = self.data[self.data['jo'] == predicted_jo]['number']
+            
             if len(jo_numbers) > 0:
-                avg_number = int(jo_numbers.tail(5).mean())
-                predicted_number = str(max(100000, min(999999, avg_number))).zfill(6)
+                # 최근 번호들의 패턴 사용
+                recent_jo_numbers = jo_numbers.tail(5)
+                
+                if len(recent_jo_numbers) >= 2:
+                    # 트렌드 계산
+                    trend = recent_jo_numbers.iloc[-1] - recent_jo_numbers.iloc[-2]
+                    predicted_number = recent_jo_numbers.iloc[-1] + trend
+                else:
+                    predicted_number = recent_jo_numbers.iloc[-1]
+                
+                # 범위 조정
+                predicted_number = max(predicted_jo * 100000, 
+                                     min((predicted_jo + 1) * 100000 - 1, int(predicted_number)))
             else:
-                base = least_common_jo * 100000
-                predicted_number = str(base + np.random.randint(0, 99999)).zfill(6)
+                # 해당 조의 기본 범위에서 랜덤
+                base = predicted_jo * 100000
+                predicted_number = base + np.random.randint(0, 99999)
             
-            pattern_predictions = self._pattern_based_predictions()
+            predicted_number_str = str(int(predicted_number)).zfill(6)
+            
+            # 추가 패턴 예측들
+            pattern_predictions = self._generate_pattern_predictions()
             
             result = {
                 'next_draw_no': int(self.data['draw_no'].max()) + 1,
                 'ml_prediction': {
-                    'jo': int(least_common_jo),
-                    'number': predicted_number,
+                    'jo': int(predicted_jo),
+                    'number': predicted_number_str,
                     'jo_confidence': 65.0
                 },
                 'pattern_predictions': pattern_predictions,
-                'confidence_score': 65.0
+                'confidence_score': 65.0,
+                'model_type': 'Pattern_Based'
             }
             
-            print(f"패턴 예측 완료: {least_common_jo}조 {predicted_number}")
+            print(f"패턴 예측 완료: {predicted_jo}조 {predicted_number_str}")
             return result
             
         except Exception as e:
             print(f"패턴 예측 실패: {e}")
             return self._generate_random_prediction()
+    
+    def _generate_pattern_predictions(self):
+        """다양한 패턴 기반 예측들"""
+        predictions = []
+        
+        try:
+            if len(self.data) == 0:
+                return predictions
+                
+            # 1. 주기성 기반 예측
+            for jo in range(1, 6):
+                jo_data = self.data[self.data['jo'] == jo]
+                if len(jo_data) > 2:
+                    # 출현 간격 계산
+                    indices = jo_data.index.tolist()
+                    if len(indices) > 1:
+                        gaps = [indices[i+1] - indices[i] for i in range(len(indices)-1)]
+                        avg_gap = np.mean(gaps)
+                        current_gap = len(self.data) - 1 - indices[-1] if indices else 0
+                        
+                        if current_gap >= avg_gap * 0.8:  # 출현할 시기
+                            avg_number = int(jo_data['number'].tail(3).mean())
+                            predictions.append({
+                                'type': 'cycle',
+                                'jo': jo,
+                                'number': str(avg_number).zfill(6),
+                                'reason': f'{jo}조 주기성 (평균 간격: {avg_gap:.1f})'
+                            })
+            
+            # 2. 트렌드 기반 예측
+            if len(self.data) >= 5:
+                recent_numbers = self.data.tail(5)['number'].values
+                if len(recent_numbers) >= 2:
+                    trend = np.polyfit(range(len(recent_numbers)), recent_numbers, 1)[0]
+                    next_number = int(recent_numbers[-1] + trend)
+                    next_number = max(100000, min(999999, next_number))
+                    next_jo = int(str(next_number).zfill(6)[0])
+                    
+                    predictions.append({
+                        'type': 'trend',
+                        'jo': next_jo,
+                        'number': str(next_number).zfill(6),
+                        'reason': f'트렌드 기반 (기울기: {trend:.0f})'
+                    })
+            
+            # 3. 평균 회귀 예측
+            for jo in range(1, 6):
+                jo_data = self.data[self.data['jo'] == jo]
+                if len(jo_data) >= 3:
+                    mean_number = int(jo_data['number'].mean())
+                    predictions.append({
+                        'type': 'mean_reversion',
+                        'jo': jo,
+                        'number': str(mean_number).zfill(6),
+                        'reason': f'{jo}조 평균 회귀'
+                    })
+            
+        except Exception as e:
+            print(f"패턴 예측 생성 중 오류: {e}")
+        
+        return predictions[:5]  # 최대 5개만 반환
     
     def _generate_random_prediction(self):
         """랜덤 예측 생성"""
@@ -427,192 +665,99 @@ class LottoPredictor:
         random_number = str(base + np.random.randint(0, 99999)).zfill(6)
         
         result = {
-            'next_draw_no': int(self.data['draw_no'].max()) + 1 if len(self.data) > 0 else 1,
+            'next_draw_no': int(self.data['draw_no'].max()) + 1 if len(self.data) > 0 else 721,
             'ml_prediction': {
                 'jo': random_jo,
                 'number': random_number,
                 'jo_confidence': 50.0
             },
             'pattern_predictions': [],
-            'confidence_score': 50.0
+            'confidence_score': 50.0,
+            'model_type': 'Random'
         }
         
         print(f"랜덤 예측: {random_jo}조 {random_number}")
         return result
     
-    def _pattern_based_predictions(self):
-        """패턴 기반 추가 예측"""
-        try:
-            predictions = []
-            
-            # 조별 주기성 분석
-            for target_jo in range(1, 6):
-                jo_data = self.data[self.data['jo'] == target_jo]
-                if len(jo_data) > 2:
-                    # 최근 출현 간격
-                    indices = jo_data.index.tolist()
-                    current_gap = len(self.data) - 1 - indices[-1] if indices else 0
-                    
-                    # 평균 간격
-                    if len(indices) > 1:
-                        gaps = [indices[i+1] - indices[i] for i in range(len(indices)-1)]
-                        avg_gap = np.mean(gaps)
-                    else:
-                        avg_gap = len(self.data) / 5  # 기본값
-                    
-                    # 출현 가능성
-                    if current_gap >= avg_gap * 0.7:
-                        recent_numbers = jo_data.tail(3)['number'].astype(int).values
-                        if len(recent_numbers) > 0:
-                            predicted_number = str(int(np.median(recent_numbers))).zfill(6)
-                            
-                            predictions.append({
-                                'jo': target_jo,
-                                'number': predicted_number,
-                                'confidence': min(85, 45 + current_gap / avg_gap * 15),
-                                'reason': f'주기성 분석 (평균 {avg_gap:.1f}회, 현재 {current_gap}회)'
-                            })
-            
-            # 상위 3개만 반환
-            return sorted(predictions, key=lambda x: x['confidence'], reverse=True)[:3]
-            
-        except Exception as e:
-            print(f"패턴 분석 실패: {e}")
-            return []
-    
-    def _calculate_confidence(self):
-        """예측 신뢰도 계산"""
-        try:
-            factors = {
-                'data_size': min(len(self.data) / 100, 1.0),
-                'model_performance': 0.7 if self.is_trained else 0.5,
-                'feature_quality': 0.65
-            }
-            
-            confidence = np.mean(list(factors.values())) * 100
-            return round(max(50.0, min(95.0, confidence)), 2)
-            
-        except Exception:
-            return 65.0
-    
     def get_statistics(self):
-        """통계 정보"""
+        """통계 정보 반환"""
         try:
             if len(self.data) == 0:
-                return self._get_default_stats()
+                return {
+                    'total_draws': 0,
+                    'jo_distribution': {},
+                    'model_status': 'No Data',
+                    'last_update': datetime.now().isoformat()
+                }
             
-            # 기본 통계
-            jo_distribution = self.data['jo'].value_counts().to_dict()
-            recent_10_jos = self.data.tail(10)['jo'].tolist() if len(self.data) >= 10 else self.data['jo'].tolist()
-            
-            numbers = self.data['number'].astype(int)
-            avg_number = int(numbers.mean())
-            std_number = int(numbers.std()) if len(numbers) > 1 else 0
-            median_number = int(numbers.median())
-            
-            # 패턴 통계 계산
-            pattern_stats = self._calculate_pattern_stats()
-            
-            # 조별 통계
-            jo_stats = {}
-            for jo in range(1, 6):
-                jo_data = self.data[self.data['jo'] == jo]
-                if len(jo_data) > 0:
-                    last_idx = jo_data.index[-1]
-                    last_appearance = len(self.data) - 1 - last_idx
-                    
-                    jo_stats[f'jo_{jo}'] = {
-                        'count': len(jo_data),
-                        'percentage': round(len(jo_data) / len(self.data) * 100, 2),
-                        'avg_number': int(jo_data['number'].astype(int).mean()),
-                        'last_appearance': last_appearance
-                    }
-                else:
-                    jo_stats[f'jo_{jo}'] = {
-                        'count': 0,
-                        'percentage': 0.0,
-                        'avg_number': jo * 100000 + 50000,
-                        'last_appearance': len(self.data)
-                    }
+            jo_dist = self.data['jo'].value_counts().to_dict()
             
             stats = {
                 'total_draws': len(self.data),
-                'jo_distribution': jo_distribution,
-                'recent_10_jos': recent_10_jos,
-                'avg_number': avg_number,
-                'std_number': std_number,
-                'median_number': median_number,
-                'pattern_stats': pattern_stats,
-                'jo_stats': jo_stats
+                'jo_distribution': jo_dist,
+                'model_status': 'Trained' if self.is_trained else 'Not Trained',
+                'model_type': list(self.models.keys()) if self.models else [],
+                'feature_count': len(self.feature_importance) if self.feature_importance else 0,
+                'last_update': datetime.now().isoformat(),
+                'data_range': {
+                    'min_draw': int(self.data['draw_no'].min()),
+                    'max_draw': int(self.data['draw_no'].max())
+                } if 'draw_no' in self.data.columns else None
             }
             
             return stats
             
         except Exception as e:
             print(f"통계 생성 실패: {e}")
-            return self._get_default_stats()
+            return {
+                'total_draws': 0,
+                'jo_distribution': {},
+                'model_status': 'Error',
+                'last_update': datetime.now().isoformat()
+            }
     
-    def _calculate_pattern_stats(self):
-        """패턴 통계 계산"""
+    def save_model(self, filepath='lotto_model.pkl'):
+        """모델 저장"""
         try:
-            pattern_stats = {
-                'avg_odd_ratio': 0.5,
-                'avg_high_ratio': 0.5,
-                'avg_consecutive': 0.2,
-                'avg_repeat': 0.1
+            import pickle
+            model_data = {
+                'models': self.models,
+                'scalers': self.scalers,
+                'feature_importance': self.feature_importance,
+                'is_trained': self.is_trained,
+                'training_history': self.training_history
             }
             
-            if len(self.data) > 0:
-                # 홀수 비율 계산
-                odd_ratios = []
-                for _, row in self.data.iterrows():
-                    number_str = str(row['number']).zfill(6)
-                    odd_count = sum(1 for d in number_str if int(d) % 2 == 1)
-                    odd_ratios.append(odd_count / 6)
-                
-                pattern_stats['avg_odd_ratio'] = round(np.mean(odd_ratios), 3)
-                
-                # 높은 숫자 비율 (5 이상)
-                high_ratios = []
-                for _, row in self.data.iterrows():
-                    number_str = str(row['number']).zfill(6)
-                    high_count = sum(1 for d in number_str if int(d) >= 5)
-                    high_ratios.append(high_count / 6)
-                
-                pattern_stats['avg_high_ratio'] = round(np.mean(high_ratios), 3)
+            with open(filepath, 'wb') as f:
+                pickle.dump(model_data, f)
             
-            return pattern_stats
+            print(f"모델 저장 완료: {filepath}")
+            return True
             
         except Exception as e:
-            print(f"패턴 통계 계산 실패: {e}")
-            return {
-                'avg_odd_ratio': 0.5,
-                'avg_high_ratio': 0.5,
-                'avg_consecutive': 0.2,
-                'avg_repeat': 0.1
-            }
+            print(f"모델 저장 실패: {e}")
+            return False
     
-    def _get_default_stats(self):
-        """기본 통계 정보"""
-        return {
-            'total_draws': 0,
-            'jo_distribution': {1: 0, 2: 0, 3: 0, 4: 0, 5: 0},
-            'recent_10_jos': [],
-            'avg_number': 300000,
-            'std_number': 100000,
-            'median_number': 300000,
-            'pattern_stats': {
-                'avg_odd_ratio': 0.5,
-                'avg_high_ratio': 0.5,
-                'avg_consecutive': 0.2,
-                'avg_repeat': 0.1
-            },
-            'jo_stats': {
-                f'jo_{jo}': {
-                    'count': 0,
-                    'percentage': 0.0,
-                    'avg_number': jo * 100000 + 50000,
-                    'last_appearance': 0
-                } for jo in range(1, 6)
-            }
-        }
+    def load_model(self, filepath='lotto_model.pkl'):
+        """모델 로드"""
+        try:
+            if not os.path.exists(filepath):
+                print(f"모델 파일이 없습니다: {filepath}")
+                return False
+                
+            import pickle
+            with open(filepath, 'rb') as f:
+                model_data = pickle.load(f)
+            
+            self.models = model_data.get('models', {})
+            self.scalers = model_data.get('scalers', {})
+            self.feature_importance = model_data.get('feature_importance', {})
+            self.is_trained = model_data.get('is_trained', False)
+            self.training_history = model_data.get('training_history', [])
+            
+            print(f"모델 로드 완료: {filepath}")
+            return True
+            
+        except Exception as e:
+            print(f"모델 로드 실패: {e}")
+            return False
