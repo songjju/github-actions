@@ -9,6 +9,8 @@ import warnings
 from datetime import datetime
 import pickle
 import os
+import hashlib
+import time
 
 warnings.filterwarnings('ignore')
 
@@ -22,6 +24,15 @@ class LottoPredictor:
         self.is_trained = False
         self.training_history = []
         
+        # 중복 방지를 위한 추가 속성
+        self.recent_predictions = []  # 최근 예측 기록
+        self.prediction_cache = {}    # 예측 캐시
+        self.randomness_seed = int(time.time())  # 시간 기반 시드
+        
+        # 자릿수별 다양성 추적 (새로 추가)
+        self.digit_frequency = {i: {} for i in range(6)}  # 각 자리별 숫자 빈도
+        self.digit_history = {i: [] for i in range(6)}    # 각 자리별 최근 사용 기록
+        
         print(f"LottoPredictor 초기화: 데이터 {len(self.data)}개")
         
         # 자동으로 모델 학습 시도
@@ -30,7 +41,510 @@ class LottoPredictor:
                 self.train_models()
             except Exception as e:
                 print(f"자동 학습 실패, 수동 학습 필요: {e}")
+
+    def _check_digit_diversity(self, number_str):
+        """자릿수별 다양성 검사"""
+        if len(number_str) != 6:
+            return True, "번호 길이 오류"
         
+        diversity_issues = []
+        
+        for pos in range(6):
+            digit = int(number_str[pos])
+            recent_digits = self.digit_history[pos][-10:]  # 최근 10회 확인
+            
+            if len(recent_digits) >= 5:  # 최소 5회 이상 기록이 있을 때만 검사
+                # 같은 자릿수가 연속으로 5회 이상 나온 경우
+                if recent_digits[-5:].count(digit) >= 5:
+                    diversity_issues.append(f"{pos+1}번째 자리: {digit}이 과도하게 반복")
+                
+                # 최근 10회 중 70% 이상이 같은 숫자인 경우
+                digit_ratio = recent_digits.count(digit) / len(recent_digits)
+                if digit_ratio > 0.7:
+                    diversity_issues.append(f"{pos+1}번째 자리: {digit}이 {digit_ratio*100:.0f}% 편중")
+        
+        if diversity_issues:
+            return False, "; ".join(diversity_issues)
+        else:
+            return True, "자릿수 다양성 양호"
+    
+    def _update_digit_statistics(self, number_str):
+        """자릿수별 통계 업데이트"""
+        if len(number_str) != 6:
+            return
+        
+        for pos in range(6):
+            digit = int(number_str[pos])
+            
+            # 빈도 업데이트
+            if digit not in self.digit_frequency[pos]:
+                self.digit_frequency[pos][digit] = 0
+            self.digit_frequency[pos][digit] += 1
+            
+            # 최근 기록 업데이트
+            self.digit_history[pos].append(digit)
+            if len(self.digit_history[pos]) > 20:  # 최근 20개만 유지
+                self.digit_history[pos] = self.digit_history[pos][-20:]
+
+    def _generate_diverse_digit_number(self, base_number, attempt=0):
+        """자릿수 다양성을 고려한 번호 생성"""
+        if attempt >= 10:  # 무한 루프 방지
+            return str(np.random.randint(100000, 999999)).zfill(6)
+        
+        base_str = str(base_number).zfill(6)
+        new_digits = list(base_str)
+        
+        # 자릿수별 다양성 검사 및 교체
+        for pos in range(6):
+            current_digit = int(new_digits[pos])
+            recent_digits = self.digit_history[pos][-10:]
+            
+            if len(recent_digits) >= 3:
+                # 현재 숫자가 최근 3회 중 2회 이상 나왔다면 교체
+                if recent_digits[-3:].count(current_digit) >= 2:
+                    # 가장 적게 사용된 숫자들 찾기
+                    digit_counts = {}
+                    for d in recent_digits:
+                        digit_counts[d] = digit_counts.get(d, 0) + 1
+                    
+                    # 사용 빈도가 낮은 숫자들 후보
+                    min_count = min(digit_counts.values()) if digit_counts else 0
+                    candidates = [d for d in range(10) if digit_counts.get(d, 0) <= min_count]
+                    
+                    # 첫 번째 자리(조)는 1-5만 허용
+                    if pos == 0:
+                        candidates = [d for d in candidates if 1 <= d <= 5]
+                    
+                    if candidates:
+                        new_digit = np.random.choice(candidates)
+                        new_digits[pos] = str(new_digit)
+                        print(f"자릿수 다양성 개선: {pos+1}번째 자리 {current_digit} → {new_digit}")
+        
+        new_number_str = ''.join(new_digits)
+        
+        # 재귀적으로 다양성 검사
+        is_diverse, message = self._check_digit_diversity(new_number_str)
+        if not is_diverse and attempt < 5:
+            print(f"자릿수 다양성 재시도 {attempt + 1}: {message}")
+            return self._generate_diverse_digit_number(int(new_number_str), attempt + 1)
+        
+        return new_number_str
+
+    def _generate_dynamic_seed(self):
+        """동적 시드 생성 - 시간, 데이터, 호출 횟수 기반"""
+        current_time = int(time.time() * 1000) % 100000  # 밀리초 단위
+        data_hash = hash(str(self.data.tail(5)['number'].tolist())) % 10000
+        call_count = len(self.recent_predictions) % 1000
+        
+        # 복합 시드 생성
+        combined = f"{current_time}{data_hash}{call_count}"
+        return int(hashlib.md5(combined.encode()).hexdigest()[:8], 16) % 100000
+
+    def _add_prediction_to_history(self, prediction):
+        """예측 기록에 추가 (최대 50개 유지)"""
+        prediction_key = f"{prediction.get('jo', 0)}_{prediction.get('number', '000000')}"
+        self.recent_predictions.append({
+            'key': prediction_key,
+            'timestamp': datetime.now(),
+            'full_prediction': prediction
+        })
+        
+        # 최근 50개만 유지
+        if len(self.recent_predictions) > 50:
+            self.recent_predictions = self.recent_predictions[-50:]
+
+    def get_digit_diversity_stats(self):
+        """자릿수별 다양성 통계 반환"""
+        stats = {}
+        
+        for pos in range(6):
+            pos_name = f"position_{pos + 1}"
+            recent_digits = self.digit_history[pos][-10:]  # 최근 10개
+            
+            if not recent_digits:
+                stats[pos_name] = {
+                    'recent_count': 0,
+                    'most_frequent': None,
+                    'diversity_score': 100
+                }
+                continue
+            
+            # 빈도 분석
+            digit_counts = {}
+            for d in recent_digits:
+                digit_counts[d] = digit_counts.get(d, 0) + 1
+            
+            most_frequent = max(digit_counts.items(), key=lambda x: x[1]) if digit_counts else (None, 0)
+            
+            # 다양성 점수 계산 (0-100, 높을수록 다양함)
+            unique_digits = len(set(recent_digits))
+            max_possible = min(10, len(recent_digits))  # 첫 자리는 1-5만 가능하지만 일반적으로 10으로 계산
+            diversity_score = (unique_digits / max_possible) * 100 if max_possible > 0 else 0
+            
+            stats[pos_name] = {
+                'recent_count': len(recent_digits),
+                'unique_digits': unique_digits,
+                'most_frequent_digit': most_frequent[0],
+                'most_frequent_count': most_frequent[1],
+                'diversity_score': round(diversity_score, 1),
+                'recent_sequence': recent_digits[-5:],  # 최근 5개
+                'frequency_distribution': dict(digit_counts)
+            }
+        
+        # 전체 다양성 점수
+        all_scores = [stats[f"position_{i+1}"]["diversity_score"] for i in range(6)]
+        overall_score = sum(all_scores) / len(all_scores) if all_scores else 0
+        
+        stats['overall_diversity'] = {
+            'score': round(overall_score, 1),
+            'status': 'excellent' if overall_score >= 80 else 'good' if overall_score >= 60 else 'needs_improvement'
+        }
+        
+        return stats
+
+    def _is_duplicate_prediction(self, jo, number):
+        """중복 예측 검사"""
+        if len(self.recent_predictions) == 0:
+            return False
+            
+        prediction_key = f"{jo}_{number}"
+        recent_keys = [p['key'] for p in self.recent_predictions[-10:]]  # 최근 10개만 확인
+        
+        return prediction_key in recent_keys
+
+    def _apply_diversity_boost(self, base_prediction, attempt=0):
+        """예측 다양성 향상을 위한 부스팅"""
+        if attempt >= 10:  # 무한 루프 방지
+            return base_prediction
+            
+        jo = base_prediction.get('jo', 1)
+        number = base_prediction.get('number', '100000')
+        
+        # 중복 검사
+        if self._is_duplicate_prediction(jo, number):
+            print(f"중복 감지: {jo}조 {number} (시도: {attempt + 1})")
+            return self._generate_alternative_prediction(base_prediction, attempt)
+        
+        return base_prediction
+
+    def _generate_alternative_prediction(self, base_prediction, attempt):
+        """대안 예측 생성"""
+        original_jo = base_prediction.get('jo', 1)
+        original_number = int(base_prediction.get('number', '100000'))
+        
+        # 동적 시드로 랜덤성 확보
+        dynamic_seed = self._generate_dynamic_seed() + attempt * 1000
+        np.random.seed(dynamic_seed)
+        
+        # 다양한 대안 생성 전략
+        strategies = [
+            self._shift_number_strategy,
+            self._change_jo_strategy, 
+            self._pattern_variation_strategy,
+            self._random_variation_strategy
+        ]
+        
+        strategy = strategies[attempt % len(strategies)]
+        alternative = strategy(original_jo, original_number, attempt)
+        
+        # 재귀적으로 중복 검사
+        if self._is_duplicate_prediction(alternative['jo'], alternative['number']):
+            return self._generate_alternative_prediction(base_prediction, attempt + 1)
+            
+        return alternative
+
+    def _shift_number_strategy(self, jo, number, attempt):
+        """번호 시프트 전략"""
+        shift_amount = (attempt + 1) * 1000 + np.random.randint(-500, 500)
+        new_number = number + shift_amount
+        
+        # 조에 맞는 범위로 조정
+        min_val = jo * 100000
+        max_val = (jo + 1) * 100000 - 1
+        new_number = max(min_val, min(max_val, new_number))
+        
+        return {
+            'jo': jo,
+            'number': str(new_number).zfill(6),
+            'method': 'shift',
+            'confidence_adjustment': -5  # 신뢰도 약간 감소
+        }
+
+    def _change_jo_strategy(self, jo, number, attempt):
+        """조 변경 전략"""
+        # 최근에 적게 사용된 조 선택
+        recent_jos = [p['full_prediction'].get('jo', 1) for p in self.recent_predictions[-20:]]
+        jo_counts = Counter(recent_jos)
+        
+        # 가장 적게 사용된 조들 중 선택
+        min_count = min(jo_counts.values()) if jo_counts else 0
+        least_used_jos = [j for j in range(1, 6) if jo_counts.get(j, 0) == min_count]
+        
+        if least_used_jos:
+            new_jo = np.random.choice(least_used_jos)
+        else:
+            new_jo = np.random.randint(1, 6)
+        
+        # 해당 조 범위에서 번호 생성
+        base = new_jo * 100000
+        new_number = base + (number % 100000)
+        
+        return {
+            'jo': new_jo,
+            'number': str(new_number).zfill(6),
+            'method': 'jo_change',
+            'confidence_adjustment': -3
+        }
+
+    def _pattern_variation_strategy(self, jo, number, attempt):
+        """패턴 변형 전략"""
+        number_str = str(number).zfill(6)
+        digits = [int(d) for d in number_str]
+        
+        # 몇 개 자릿수를 변경
+        num_changes = min(2, attempt + 1)
+        change_positions = np.random.choice(6, num_changes, replace=False)
+        
+        for pos in change_positions:
+            # 원래 숫자와 다른 숫자로 변경
+            original_digit = digits[pos]
+            new_digit = np.random.randint(0, 10)
+            while new_digit == original_digit:
+                new_digit = np.random.randint(0, 10)
+            digits[pos] = new_digit
+        
+        new_number_str = ''.join(map(str, digits))
+        new_jo = int(new_number_str[0])
+        
+        # 조가 유효하지 않으면 조정
+        if new_jo < 1 or new_jo > 5:
+            new_jo = jo
+            digits[0] = jo
+            new_number_str = ''.join(map(str, digits))
+        
+        return {
+            'jo': new_jo,
+            'number': new_number_str,
+            'method': 'pattern_variation',
+            'confidence_adjustment': -7
+        }
+
+    def _random_variation_strategy(self, jo, number, attempt):
+        """랜덤 변형 전략"""
+        # 완전히 새로운 번호 생성
+        if attempt < 5:
+            # 같은 조에서 새 번호
+            base = jo * 100000
+            new_number = base + np.random.randint(0, 99999)
+        else:
+            # 다른 조에서도 허용
+            new_jo = np.random.randint(1, 6)
+            base = new_jo * 100000
+            new_number = base + np.random.randint(0, 99999)
+            jo = new_jo
+        
+        return {
+            'jo': jo,
+            'number': str(new_number).zfill(6),
+            'method': 'random_variation',
+            'confidence_adjustment': -10
+        }
+
+    def predict_next(self):
+        """개선된 예측 함수 - 중복 방지 포함"""
+        try:
+            if not self.is_trained:
+                print("모델이 학습되지 않았습니다. 학습을 시도합니다...")
+                self.train_models()
+                if not self.is_trained:
+                    return self._generate_random_prediction()
+            
+            print("=== AI 예측 수행 (중복 방지) ===")
+            
+            # 간단한 모델인 경우
+            if 'simple' in self.models:
+                return self._generate_pattern_prediction()
+            
+            # AI 모델 예측
+            base_result = self._ml_predict()
+            
+            # 중복 방지 처리
+            main_prediction = base_result.get('ml_prediction', {})
+            diversity_result = self._apply_diversity_boost(main_prediction)
+            
+            # 결과에 다양성 정보 추가
+            if 'confidence_adjustment' in diversity_result:
+                adjustment = diversity_result.pop('confidence_adjustment')
+                base_result['confidence_score'] = max(50, base_result.get('confidence_score', 75) + adjustment)
+                base_result['diversity_method'] = diversity_result.pop('method', 'original')
+                print(f"다양성 적용: {diversity_result['method']} (신뢰도 조정: {adjustment})")
+            
+            # 메인 예측 업데이트
+            base_result['ml_prediction'].update(diversity_result)
+            
+            # 예측 기록에 추가
+            self._add_prediction_to_history(base_result['ml_prediction'])
+            
+            # 추가 패턴 예측들도 다양성 적용
+            pattern_predictions = base_result.get('pattern_predictions', [])
+            diverse_pattern_predictions = []
+            
+            for pred in pattern_predictions:
+                diverse_pred = self._apply_diversity_boost({
+                    'jo': pred.get('jo'),
+                    'number': pred.get('number')
+                })
+                
+                pred.update({
+                    'jo': diverse_pred['jo'],
+                    'number': diverse_pred['number']
+                })
+                diverse_pattern_predictions.append(pred)
+            
+            base_result['pattern_predictions'] = diverse_pattern_predictions
+            
+            print(f"=== 중복 방지 예측 완료: {base_result['ml_prediction']['jo']}조 {base_result['ml_prediction']['number']} ===")
+            return base_result
+            
+        except Exception as e:
+            print(f"예측 실행 실패: {e}")
+            import traceback
+            traceback.print_exc()
+            return self._generate_random_prediction()
+
+    def _ml_predict(self):
+        """ML 모델을 사용한 예측 (기존 코드 유지)"""
+        try:
+            print("AI 모델로 예측 중...")
+            
+            # 최신 데이터로 특징 생성
+            if len(self.data) == 0:
+                raise ValueError("예측을 위한 데이터가 없습니다")
+                
+            last_features = self.extract_features(self.data.tail(1))
+            
+            if len(last_features) == 0:
+                raise ValueError("특징 추출에 실패했습니다")
+            
+            predictions = {}
+            confidence_scores = {}
+            
+            # 번호 예측 (앙상블)
+            if 'rf' in self.models and 'gb' in self.models and 'number' in self.scalers:
+                # 스케일링
+                last_features_scaled = self.scalers['number'].transform(last_features)
+                
+                # 각 모델 예측 - 랜덤성 추가
+                dynamic_seed = self._generate_dynamic_seed()
+                
+                # Random Forest에 랜덤성 추가
+                rf_pred = self.models['rf'].predict(last_features_scaled)[0]
+                rf_noise = np.random.normal(0, abs(rf_pred) * 0.01)  # 1% 노이즈
+                rf_pred += rf_noise
+                
+                # Gradient Boosting에 랜덤성 추가  
+                gb_pred = self.models['gb'].predict(last_features_scaled)[0]
+                gb_noise = np.random.normal(0, abs(gb_pred) * 0.01)  # 1% 노이즈
+                gb_pred += gb_noise
+                
+                # 앙상블 예측 (가중 평균)
+                ensemble_pred = rf_pred * 0.6 + gb_pred * 0.4
+                
+                # 유효한 범위로 조정
+                ensemble_pred = int(max(100000, min(999999, ensemble_pred)))
+                predictions['number'] = str(ensemble_pred).zfill(6)
+                
+                # 신뢰도 계산 (모델 간 일치도 기반)
+                diff_ratio = abs(rf_pred - gb_pred) / max(abs(rf_pred), abs(gb_pred), 1)
+                confidence_scores['number'] = max(50, 90 - diff_ratio * 40)
+                
+                print(f"번호 예측: {predictions['number']} (신뢰도: {confidence_scores['number']:.1f}%)")
+            else:
+                # 모델이 없으면 패턴 기반
+                predictions['number'] = str(np.random.randint(100000, 999999)).zfill(6)
+                confidence_scores['number'] = 50.0
+            
+            # 조 예측
+            if 'rf_jo' in self.models:
+                last_features_scaled = self.scalers['number'].transform(last_features)
+                jo_pred = self.models['rf_jo'].predict(last_features_scaled)[0]
+                jo_probs = self.models['rf_jo'].predict_proba(last_features_scaled)[0]
+                
+                predictions['jo'] = int(jo_pred)
+                confidence_scores['jo'] = max(jo_probs) * 100
+                
+                print(f"조 예측: {predictions['jo']}조 (신뢰도: {confidence_scores['jo']:.1f}%)")
+            else:
+                # 최근 패턴 기반 조 예측
+                recent_jos = self.data.tail(20)['jo'] if len(self.data) >= 20 else self.data['jo']
+                jo_counts = recent_jos.value_counts()
+                
+                # 가장 적게 나온 조 선택 (보정)
+                if len(jo_counts) > 0:
+                    least_common_jo = jo_counts.idxmin()
+                    predictions['jo'] = int(least_common_jo)
+                    confidence_scores['jo'] = 65.0
+                else:
+                    predictions['jo'] = int(predictions['number'][0])
+                    confidence_scores['jo'] = 50.0
+            
+            # 번호와 조 일치성 확인 및 보정
+            predicted_jo_from_number = int(predictions['number'][0])
+            if predicted_jo_from_number != predictions['jo']:
+                # 조에 맞게 번호 조정
+                base = predictions['jo'] * 100000
+                remainder = int(predictions['number']) % 100000
+                adjusted_number = base + remainder
+                predictions['number'] = str(adjusted_number).zfill(6)
+                print(f"번호-조 일치성 보정: {predictions['number']}")
+            
+            # 패턴 기반 추가 예측
+            pattern_predictions = self._generate_pattern_predictions()
+            
+            # 전체 신뢰도 계산
+            overall_confidence = (confidence_scores.get('number', 50) + confidence_scores.get('jo', 50)) / 2
+            
+            result = {
+                'next_draw_no': int(self.data['draw_no'].max()) + 1,
+                'ml_prediction': {
+                    'jo': predictions['jo'],
+                    'number': predictions['number'],
+                    'jo_confidence': round(confidence_scores.get('jo', 50), 2),
+                    'number_confidence': round(confidence_scores.get('number', 50), 2)
+                },
+                'pattern_predictions': pattern_predictions,
+                'confidence_score': round(overall_confidence, 2),
+                'model_type': 'AI_ML',
+                'features_used': len(last_features.columns)
+            }
+            
+            return result
+            
+        except Exception as e:
+            print(f"ML 예측 실패: {e}")
+            import traceback
+            traceback.print_exc()
+            return self._generate_pattern_prediction()
+
+    def get_prediction_diversity_stats(self):
+        """예측 다양성 통계"""
+        if len(self.recent_predictions) < 5:
+            return {"message": "충분한 예측 기록이 없습니다"}
+        
+        recent_jos = [p['full_prediction'].get('jo', 1) for p in self.recent_predictions[-20:]]
+        recent_numbers = [p['full_prediction'].get('number', '100000') for p in self.recent_predictions[-20:]]
+        
+        jo_diversity = len(set(recent_jos)) / min(len(recent_jos), 5)  # 최대 5개 조
+        number_diversity = len(set(recent_numbers)) / len(recent_numbers)
+        
+        return {
+            'jo_diversity': round(jo_diversity, 2),
+            'number_diversity': round(number_diversity, 2),
+            'recent_predictions_count': len(self.recent_predictions),
+            'jo_distribution': dict(Counter(recent_jos)),
+            'duplicate_prevention_active': True
+        }
+
     def _validate_data(self, data):
         """데이터 유효성 검사 및 정리 (강화된 버전)"""
         try:

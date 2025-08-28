@@ -7,6 +7,196 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- 다양성 관리 스타일 -->
+    <style>
+        .nav-diversity {
+            position: relative;
+        }
+        
+        .diversity-indicator {
+            position: absolute;
+            top: -5px;
+            right: -8px;
+            width: 12px;
+            height: 12px;
+            background: #27ae60;
+            border-radius: 50%;
+            border: 2px solid white;
+            animation: pulse 2s infinite;
+        }
+        
+        .diversity-indicator.warning {
+            background: #f39c12;
+        }
+        
+        .diversity-indicator.danger {
+            background: #e74c3c;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .nav-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: white;
+            min-width: 220px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            border-radius: 8px;
+            z-index: 1000;
+            top: 100%;
+            right: 0;
+            margin-top: 5px;
+            border: 1px solid #e9ecef;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+        
+        .nav-dropdown:hover .dropdown-content,
+        .dropdown-content:hover {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: all;
+        }
+        
+        .nav-dropdown.active .dropdown-content {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: all;
+        }
+        
+        /* 드롭다운과 트리거 사이의 연결 영역 */
+        .nav-dropdown::before {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            height: 10px;
+            background: transparent;
+            z-index: 999;
+        }
+        
+        .dropdown-item {
+            color: var(--dark-color);
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            transition: background-color 0.3s;
+            border-bottom: 1px solid #f8f9fa;
+        }
+        
+        .dropdown-item:hover {
+            background-color: #f8f9fa;
+            color: var(--primary-color);
+        }
+        
+        .dropdown-item:last-child {
+            border-bottom: none;
+            border-radius: 0 0 8px 8px;
+        }
+        
+        .dropdown-item:first-child {
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .dropdown-item i {
+            margin-right: 8px;
+            width: 16px;
+            text-align: center;
+        }
+        
+        .system-status {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 10px 15px;
+            border-radius: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            font-size: 0.8rem;
+            z-index: 1000;
+            display: none;
+            backdrop-filter: blur(10px);
+        }
+        
+        .system-status.show {
+            display: block;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 5px 0;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #27ae60;
+        }
+        
+        .status-dot.warning { background: #f39c12; }
+        .status-dot.danger { background: #e74c3c; }
+        
+        .mobile-nav-toggle {
+            display: none;
+        }
+        
+        @media (max-width: 768px) {
+            .nav-menu {
+                position: fixed;
+                left: -100%;
+                top: 70px;
+                flex-direction: column;
+                background-color: white;
+                width: 100%;
+                text-align: center;
+                transition: 0.3s;
+                box-shadow: 0 10px 27px rgba(0, 0, 0, 0.05);
+                padding: 20px 0;
+            }
+            
+            .nav-menu.active {
+                left: 0;
+            }
+            
+            .mobile-nav-toggle {
+                display: block;
+                color: var(--primary-color);
+                font-size: 1.5rem;
+                cursor: pointer;
+            }
+            
+            .dropdown-content {
+                position: static;
+                display: block;
+                box-shadow: none;
+                background: #f8f9fa;
+                margin: 10px 0;
+                border-radius: 0;
+            }
+            
+            .system-status {
+                display: none !important;
+            }
+        }
+    </style>
     {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -16,22 +206,75 @@
                 <i class="fas fa-ticket-alt"></i>
                 <span>연금복권 AI</span>
             </a>
-            <ul class="nav-menu">
+            
+            <!-- 모바일 햄버거 메뉴 -->
+            <div class="mobile-nav-toggle" onclick="toggleMobileMenu()">
+                <i class="fas fa-bars"></i>
+            </div>
+            
+            <ul class="nav-menu" id="nav-menu">
                 <li class="nav-item">
-                    <a href="/" class="nav-link">홈</a>
+                    <a href="/" class="nav-link">
+                        <i class="fas fa-home"></i> 홈
+                    </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/predict" class="nav-link">예측하기</a>
+                    <a href="/predict" class="nav-link">
+                        <i class="fas fa-magic"></i> 예측하기
+                    </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/analysis" class="nav-link">분석</a>
+                    <a href="/analysis" class="nav-link">
+                        <i class="fas fa-chart-bar"></i> 분석
+                    </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/history" class="nav-link">기록</a>
+                    <a href="/history" class="nav-link">
+                        <i class="fas fa-history"></i> 기록
+                    </a>
+                </li>
+                
+                <!-- 다양성 관리 드롭다운 메뉴 - 클릭 방식으로 변경 -->
+                <li class="nav-item nav-dropdown" id="diversity-dropdown">
+                    <a href="#" class="nav-link nav-diversity" onclick="toggleDiversityDropdown(event)">
+                        <i class="fas fa-random"></i> 다양성
+                        <div class="diversity-indicator" id="diversity-indicator"></div>
+                        <i class="fas fa-chevron-down" style="margin-left: 5px; font-size: 0.8em;" id="diversity-chevron"></i>
+                    </a>
+                    <div class="dropdown-content" id="diversity-dropdown-content">
+                        <a href="#" onclick="showQuickDiversityStats()" class="dropdown-item">
+                            <i class="fas fa-chart-pie"></i> 빠른 통계 보기
+                        </a>
+                        <a href="#" onclick="testDiversitySystem()" class="dropdown-item">
+                            <i class="fas fa-flask"></i> 다양성 테스트
+                        </a>
+                        <a href="#" onclick="resetDiversityCache()" class="dropdown-item">
+                            <i class="fas fa-refresh"></i> 캐시 새로고침
+                        </a>
+                        <a href="#" onclick="toggleSystemStatus()" class="dropdown-item">
+                            <i class="fas fa-info-circle"></i> 시스템 상태
+                        </a>
+                    </div>
                 </li>
             </ul>
         </div>
     </nav>
+
+    <!-- 시스템 상태 표시 -->
+    <div class="system-status" id="system-status">
+        <div class="status-item">
+            <div class="status-dot" id="ai-status"></div>
+            <span>AI 모델: <span id="ai-status-text">확인중...</span></span>
+        </div>
+        <div class="status-item">
+            <div class="status-dot" id="diversity-status"></div>
+            <span>다양성: <span id="diversity-status-text">확인중...</span></span>
+        </div>
+        <div class="status-item">
+            <div class="status-dot" id="data-status"></div>
+            <span>데이터: <span id="data-status-text">확인중...</span></span>
+        </div>
+    </div>
 
     <main>
         {% block content %}{% endblock %}
@@ -43,11 +286,465 @@
                 <p>※ 이 시스템은 AI 기반 통계 분석 도구입니다.</p>
                 <p>※ 실제 당첨을 보장하지 않으며, 과도한 복권 구매는 재정적 문제를 일으킬 수 있습니다.</p>
                 <p>© 2024 연금복권 AI 예측 시스템. All rights reserved.</p>
+                <div style="margin-top: 10px; font-size: 0.8em; opacity: 0.7;">
+                    <span id="last-updated">마지막 업데이트: 확인중...</span> |
+                    <span>다양성 기능: <span id="diversity-enabled">확인중...</span></span>
+                </div>
             </div>
         </div>
     </footer>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
+    
+    <!-- 다양성 관리 스크립트 -->
+    <script>
+        // 전역 상태 관리
+        let systemStatusVisible = false;
+        let diversityCheckInterval = null;
+        let diversityDropdownOpen = false;
+        
+        // 페이지 로드 시 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeDiversityMonitoring();
+            updateSystemStatus();
+            
+            // 30초마다 상태 체크
+            setInterval(updateSystemStatus, 30000);
+            
+            // 외부 클릭으로 드롭다운 닫기
+            document.addEventListener('click', closeDropdownOnOutsideClick);
+        });
+        
+        // 다양성 드롭다운 토글
+        function toggleDiversityDropdown(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            const dropdown = document.getElementById('diversity-dropdown');
+            const content = document.getElementById('diversity-dropdown-content');
+            const chevron = document.getElementById('diversity-chevron');
+            
+            diversityDropdownOpen = !diversityDropdownOpen;
+            
+            if (diversityDropdownOpen) {
+                dropdown.classList.add('active');
+                chevron.style.transform = 'rotate(180deg)';
+            } else {
+                dropdown.classList.remove('active');
+                chevron.style.transform = 'rotate(0deg)';
+            }
+        }
+        
+        // 외부 클릭으로 드롭다운 닫기
+        function closeDropdownOnOutsideClick(event) {
+            const dropdown = document.getElementById('diversity-dropdown');
+            
+            if (diversityDropdownOpen && !dropdown.contains(event.target)) {
+                dropdown.classList.remove('active');
+                document.getElementById('diversity-chevron').style.transform = 'rotate(0deg)';
+                diversityDropdownOpen = false;
+            }
+        }
+        
+        // 다양성 모니터링 초기화
+        function initializeDiversityMonitoring() {
+            // 다양성 지시등 업데이트
+            updateDiversityIndicator();
+            
+            // 10초마다 다양성 상태 체크
+            diversityCheckInterval = setInterval(updateDiversityIndicator, 10000);
+        }
+        
+        // 다양성 지시등 업데이트
+        async function updateDiversityIndicator() {
+            try {
+                const response = await fetch('/api/diversity/stats');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const indicator = document.getElementById('diversity-indicator');
+                    const diversityScore = data.data.global_diversity?.diversity_score || 0;
+                    
+                    // 다양성 점수에 따른 색상 변경
+                    indicator.className = 'diversity-indicator';
+                    if (diversityScore >= 70) {
+                        indicator.classList.add(''); // 기본 초록색
+                    } else if (diversityScore >= 40) {
+                        indicator.classList.add('warning');
+                    } else {
+                        indicator.classList.add('danger');
+                    }
+                }
+            } catch (error) {
+                console.log('다양성 상태 체크 실패:', error);
+            }
+        }
+        
+        // 시스템 상태 업데이트
+        async function updateSystemStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const status = data.data;
+                    
+                    // AI 모델 상태
+                    const aiStatus = document.getElementById('ai-status');
+                    const aiText = document.getElementById('ai-status-text');
+                    if (status.predictor_trained) {
+                        aiStatus.className = 'status-dot';
+                        aiText.textContent = '정상 동작';
+                    } else {
+                        aiStatus.className = 'status-dot warning';
+                        aiText.textContent = '학습 필요';
+                    }
+                    
+                    // 다양성 상태
+                    const divStatus = document.getElementById('diversity-status');
+                    const divText = document.getElementById('diversity-status-text');
+                    if (status.diversity_status?.enabled) {
+                        divStatus.className = 'status-dot';
+                        divText.textContent = `활성 (${status.diversity_status.cache_size}개)`;
+                    } else {
+                        divStatus.className = 'status-dot danger';
+                        divText.textContent = '비활성';
+                    }
+                    
+                    // 데이터 상태
+                    const dataStatus = document.getElementById('data-status');
+                    const dataText = document.getElementById('data-status-text');
+                    if (status.data_count > 0) {
+                        dataStatus.className = 'status-dot';
+                        dataText.textContent = `${status.data_count}개`;
+                    } else {
+                        dataStatus.className = 'status-dot danger';
+                        dataText.textContent = '데이터 없음';
+                    }
+                    
+                    // 하단 정보 업데이트
+                    document.getElementById('last-updated').textContent = 
+                        '마지막 업데이트: ' + new Date(status.last_update).toLocaleString('ko-KR');
+                    document.getElementById('diversity-enabled').textContent = 
+                        status.diversity_status?.enabled ? '활성화' : '비활성화';
+                }
+            } catch (error) {
+                console.log('시스템 상태 업데이트 실패:', error);
+            }
+        }
+        
+        // 빠른 다양성 통계 표시 (자릿수 다양성 포함)
+        async function showQuickDiversityStats() {
+            closeDiversityDropdown();
+            
+            try {
+                showNotification('다양성 통계를 불러오는 중...', 'info');
+                
+                const response = await fetch('/api/diversity/stats');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const stats = data.data.global_diversity;
+                    const digitStats = stats.digit_diversity || {};
+                    
+                    let message = `📊 종합 다양성 통계 (실시간)\n\n`;
+                    
+                    // 전체 다양성
+                    message += `🎯 전체 다양성: ${stats.diversity_score?.toFixed(1) || 0}%\n`;
+                    message += `📈 평균 차이값: ${parseInt(stats.average_difference || 0).toLocaleString()}\n`;
+                    message += `💾 예측 기록: ${stats.total_predictions || 0}개\n\n`;
+                    
+                    // 자릿수별 다양성
+                    message += `🔢 자릿수별 다양성 (전체: ${stats.digit_overall_score?.toFixed(1) || 0}%):\n`;
+                    
+                    for (let pos = 1; pos <= 6; pos++) {
+                        const posKey = `position_${pos}`;
+                        const posData = digitStats[posKey];
+                        
+                        if (posData) {
+                            const statusIcon = posData.diversity_score >= 80 ? '✅' : 
+                                             posData.diversity_score >= 60 ? '⚠️' : '🔴';
+                            message += `${statusIcon} ${pos}자리: ${posData.diversity_score}% (최빈: ${posData.most_common}, ${posData.most_common_frequency}회)\n`;
+                        }
+                    }
+                    
+                    message += `\n🔄 최근 5개: ${stats.recent_predictions?.slice(-5).join(', ') || '없음'}\n\n`;
+                    
+                    // 상태 평가
+                    const overallStatus = stats.diversity_score >= 70 && stats.digit_overall_score >= 70 ? 
+                        '✅ 다양성 우수' : 
+                        stats.diversity_score >= 40 || stats.digit_overall_score >= 40 ? 
+                        '⚠️ 다양성 보통' : 
+                        '🔴 다양성 개선 필요';
+                    
+                    message += `${overallStatus}\n\n`;
+                    message += `💡 팁: ${stats.digit_overall_score < 60 ? '특정 자릿수 편중 문제 - 캐시 새로고침 권장' : '다양성 시스템이 잘 작동 중입니다'}`;
+                    
+                    showNotification('다양성 통계가 업데이트되었습니다', 'success');
+                    alert(message);
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                showNotification('다양성 통계를 불러올 수 없습니다', 'error');
+                console.error('통계 조회 실패:', error);
+            }
+        }
+        
+        // 다양성 시스템 테스트 - 강화된 오류 처리
+        async function testDiversitySystem() {
+            closeDiversityDropdown();
+            
+            if (!confirm('다양성 시스템 테스트를 실행하시겠습니까?\n5개의 테스트 예측을 생성합니다.')) {
+                return;
+            }
+            
+            try {
+                showNotification('다양성 테스트를 실행하는 중...', 'info');
+                
+                const response = await fetch('/api/diversity/test', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                // 응답 상태 확인
+                if (!response.ok) {
+                    throw new Error(`서버 오류: ${response.status} ${response.statusText}`);
+                }
+                
+                // Content-Type 확인
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    // JSON이 아닌 응답 (HTML 에러 페이지 등)
+                    const textResponse = await response.text();
+                    console.error('비-JSON 응답:', textResponse.substring(0, 200));
+                    throw new Error('서버가 HTML 페이지를 반환했습니다. 라우트를 확인해주세요.');
+                }
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const results = data.test_results;
+                    const predictions = results.predictions || [];
+                    const diversityStats = results.diversity_stats || {};
+                    const systemInfo = results.system_info || {};
+                    const testErrors = results.test_errors || [];
+                    
+                    let testReport = `🧪 다양성 시스템 테스트 결과\n`;
+                    testReport += `⏰ 테스트 시간: ${new Date(data.timestamp).toLocaleString('ko-KR')}\n\n`;
+                    
+                    testReport += `📊 테스트 예측 결과 (${predictions.length}개):\n`;
+                    predictions.forEach(p => {
+                        if (p.success) {
+                            testReport += `${p.attempt}. ✅ ${p.jo || '?'}조 ${p.number || '??????'} (신뢰도: ${p.confidence}% | ${p.model_type})\n`;
+                            if (p.note) testReport += `   💡 ${p.note}\n`;
+                        } else {
+                            testReport += `${p.attempt}. ❌ 실패: ${p.error}\n`;
+                        }
+                    });
+                    
+                    testReport += `\n🎯 다양성 분석:\n`;
+                    if (diversityStats.error) {
+                        testReport += `❌ 통계 수집 실패: ${diversityStats.error}\n`;
+                    } else {
+                        testReport += `- 다양성 점수: ${diversityStats.diversity_score || 0}%\n`;
+                        testReport += `- 평균 차이: ${parseInt(diversityStats.average_difference || 0).toLocaleString()}\n`;
+                        testReport += `- 총 기록: ${diversityStats.total_predictions || 0}개\n`;
+                    }
+                    
+                    testReport += `\n🔧 시스템 상태:\n`;
+                    testReport += `- AI 모델: ${systemInfo.predictor_available ? '✅ 사용 가능' : '❌ 사용 불가'}\n`;
+                    testReport += `- 고급 모델: ${systemInfo.advanced_predictor_available ? '✅ 사용 가능' : '❌ 사용 불가'}\n`;
+                    testReport += `- 다양성 관리: ${systemInfo.diversity_manager_available ? '✅ 활성화' : '❌ 비활성화'}\n`;
+                    testReport += `- 데이터: ${systemInfo.data_count || 0}개\n`;
+                    testReport += `- 초기화 상태: ${systemInfo.initialization_status}\n`;
+                    testReport += `- 성공률: ${systemInfo.successful_predictions}/${predictions.length}\n`;
+                    
+                    if (testErrors && testErrors.length > 0) {
+                        testReport += `\n⚠️ 발생한 오류들:\n`;
+                        testErrors.forEach(error => testReport += `- ${error}\n`);
+                    }
+                    
+                    testReport += `\n${systemInfo.successful_predictions > 0 ? '✅ 테스트 부분 성공' : '❌ 테스트 실패'}`;
+                    
+                    showNotification('다양성 테스트가 완료되었습니다', systemInfo.successful_predictions > 0 ? 'success' : 'error');
+                    alert(testReport);
+                    
+                } else {
+                    throw new Error(data.message || '알 수 없는 오류');
+                }
+                
+            } catch (error) {
+                console.error('다양성 테스트 오류:', error);
+                
+                let errorMessage = '❌ 다양성 테스트 실행 실패\n\n';
+                
+                if (error.message.includes('<!DOCTYPE')) {
+                    errorMessage += '🔍 문제: 서버가 HTML 에러 페이지를 반환했습니다.\n';
+                    errorMessage += '💡 해결방법:\n';
+                    errorMessage += '1. Flask 서버가 정상 실행 중인지 확인\n';
+                    errorMessage += '2. /api/diversity/test 라우트가 올바르게 등록되었는지 확인\n';
+                    errorMessage += '3. 서버 로그에서 에러 확인\n';
+                    errorMessage += '4. 브라우저 개발자 도구 콘솔 확인';
+                } else if (error.message.includes('Failed to fetch')) {
+                    errorMessage += '🔍 문제: 서버에 연결할 수 없습니다.\n';
+                    errorMessage += '💡 해결방법:\n';
+                    errorMessage += '1. Flask 서버가 실행 중인지 확인 (포트 5000)\n';
+                    errorMessage += '2. 방화벽 설정 확인\n';
+                    errorMessage += '3. CORS 설정 확인';
+                } else {
+                    errorMessage += `🔍 오류 상세:\n${error.message}`;
+                }
+                
+                showNotification('다양성 테스트 실행 실패', 'error');
+                alert(errorMessage);
+            }
+        }
+        
+        // 드롭다운 닫기 헬퍼
+        function closeDiversityDropdown() {
+            const dropdown = document.getElementById('diversity-dropdown');
+            const chevron = document.getElementById('diversity-chevron');
+            
+            if (diversityDropdownOpen) {
+                dropdown.classList.remove('active');
+                chevron.style.transform = 'rotate(0deg)';
+                diversityDropdownOpen = false;
+            }
+        }
+        
+        // 다양성 캐시 새로고침
+        async function resetDiversityCache() {
+            closeDiversityDropdown();
+            
+            if (!confirm('다양성 캐시를 새로고침하시겠습니까?\n기존 예측 기록이 초기화됩니다.')) return;
+            
+            try {
+                showNotification('캐시를 새로고침하는 중...', 'info');
+                
+                const response = await fetch('/api/diversity/reset', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    showNotification(`캐시 새로고침 완료! ${data.data.cleared_predictions}개 기록 초기화`, 'success');
+                    updateDiversityIndicator();
+                    
+                    // 상세 결과 표시
+                    setTimeout(() => {
+                        alert(`✅ 캐시 새로고침 완료!\n\n📊 초기화된 데이터:\n- 예측 기록: ${data.data.cleared_predictions}개\n- 세션 기록: ${data.data.cleared_sessions || 0}개\n\n이제 새로운 예측이 더 다양하게 생성됩니다.`);
+                    }, 1000);
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                showNotification('캐시 새로고침 실패', 'error');
+                alert('❌ 새로고침 중 오류가 발생했습니다:\n' + error.message);
+            }
+        }
+        
+        // 시스템 상태 토글
+        function toggleSystemStatus() {
+            closeDiversityDropdown();
+            
+            const statusPanel = document.getElementById('system-status');
+            systemStatusVisible = !systemStatusVisible;
+            
+            if (systemStatusVisible) {
+                statusPanel.classList.add('show');
+                updateSystemStatus(); // 즉시 업데이트
+                showNotification('시스템 상태 패널이 열렸습니다', 'info');
+            } else {
+                statusPanel.classList.remove('show');
+            }
+        }
+        
+        // 모바일 네비게이션 토글
+        function toggleMobileMenu() {
+            const navMenu = document.getElementById('nav-menu');
+            navMenu.classList.toggle('active');
+        }
+        
+        // 외부 클릭 시 시스템 상태 숨기기
+        document.addEventListener('click', function(event) {
+            const statusPanel = document.getElementById('system-status');
+            const trigger = event.target.closest('.dropdown-item');
+            
+            if (systemStatusVisible && !statusPanel.contains(event.target) && !trigger) {
+                statusPanel.classList.remove('show');
+                systemStatusVisible = false;
+            }
+        });
+        
+        // 키보드 단축키 추가
+        document.addEventListener('keydown', function(e) {
+            // Ctrl/Cmd + D: 다양성 통계 (대시보드 대신)
+            if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+                e.preventDefault();
+                showQuickDiversityStats();
+            }
+            
+            // Ctrl/Cmd + Shift + S: 시스템 상태 토글
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'S') {
+                e.preventDefault();
+                toggleSystemStatus();
+            }
+        });
+        
+        // 알림 표시 헬퍼 함수
+        function showNotification(message, type = 'info') {
+            // 기존 알림이 있다면 제거
+            const existingNotification = document.querySelector('.notification');
+            if (existingNotification) {
+                existingNotification.remove();
+            }
+            
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+                <span>${message}</span>
+                <button onclick="this.parentElement.remove()" style="background: none; border: none; color: white; float: right; cursor: pointer;">×</button>
+            `;
+            
+            // 스타일 적용
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#27ae60' : type === 'error' ? '#e74c3c' : '#3498db'};
+                color: white;
+                padding: 15px 20px;
+                border-radius: 5px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 10000;
+                max-width: 400px;
+                font-size: 14px;
+                line-height: 1.4;
+                transform: translateX(100%);
+                transition: transform 0.3s ease;
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // 애니메이션
+            setTimeout(() => notification.style.transform = 'translateX(0)', 100);
+            
+            // 자동 제거
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.style.transform = 'translateX(100%)';
+                    setTimeout(() => notification.remove(), 300);
+                }
+            }, 5000);
+        }
+    </script>
+    
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>

@@ -1,0 +1,758 @@
+{% extends "base.html" %}
+
+{% block title %}예측 다양성 관리 | 연금복권 AI{% endblock %}
+
+{% block extra_head %}
+<style>
+.diversity-dashboard {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.dashboard-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 40px;
+    border-radius: 15px;
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.dashboard-title {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+}
+
+.dashboard-subtitle {
+    opacity: 0.9;
+    font-size: 1.1rem;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 25px;
+    margin-bottom: 40px;
+}
+
+.stat-card {
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+}
+
+.stat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.stat-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.stat-icon {
+    font-size: 2rem;
+    color: var(--primary-color);
+}
+
+.stat-value {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: var(--primary-color);
+    margin-bottom: 10px;
+}
+
+.stat-description {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.progress-container {
+    margin: 15px 0;
+}
+
+.progress-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 12px;
+    background: #e9ecef;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+    border-radius: 6px;
+    transition: width 0.8s ease;
+    width: 0%;
+}
+
+.controls-section {
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+}
+
+.controls-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 25px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.controls-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+}
+
+.control-group {
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    border-left: 4px solid var(--primary-color);
+}
+
+.control-label {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.control-input {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+.control-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.control-description {
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 5px;
+    line-height: 1.3;
+}
+
+.button-group {
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.btn {
+    padding: 12px 25px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-primary {
+    background: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #5a6fd8;
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #545b62;
+    transform: translateY(-2px);
+}
+
+.btn-danger {
+    background: #e74c3c;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c0392b;
+    transform: translateY(-2px);
+}
+
+.recent-predictions {
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+}
+
+.predictions-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.predictions-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.prediction-chip {
+    background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-family: monospace;
+    font-size: 0.9rem;
+}
+
+.chart-container {
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+}
+
+.chart-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.alert {
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    display: none;
+}
+
+.alert-success {
+    background: rgba(46, 204, 113, 0.1);
+    color: #27ae60;
+    border-left: 4px solid #27ae60;
+}
+
+.alert-error {
+    background: rgba(231, 76, 60, 0.1);
+    color: #e74c3c;
+    border-left: 4px solid #e74c3c;
+}
+
+.loading {
+    display: none;
+    text-align: center;
+    padding: 20px;
+    color: #666;
+}
+
+.loading i {
+    animation: spin 1s linear infinite;
+    margin-right: 10px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+    .dashboard-header {
+        padding: 30px 20px;
+    }
+    
+    .dashboard-title {
+        font-size: 2rem;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .controls-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .button-group {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="diversity-dashboard">
+    <div class="dashboard-header">
+        <h1 class="dashboard-title">
+            <i class="fas fa-random"></i>
+            예측 다양성 관리
+        </h1>
+        <p class="dashboard-subtitle">
+            중복 예측 방지 및 다양성 최적화를 위한 관리 도구
+        </p>
+    </div>
+
+    <!-- 알림 메시지 -->
+    <div id="alert-success" class="alert alert-success">
+        <i class="fas fa-check-circle"></i>
+        <span id="success-message"></span>
+    </div>
+    
+    <div id="alert-error" class="alert alert-error">
+        <i class="fas fa-exclamation-circle"></i>
+        <span id="error-message"></span>
+    </div>
+
+    <!-- 로딩 인디케이터 -->
+    <div id="loading" class="loading">
+        <i class="fas fa-spinner"></i>
+        데이터를 불러오는 중...
+    </div>
+
+    <!-- 통계 카드들 -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-header">
+                <h3 class="stat-title">전체 다양성 점수</h3>
+                <i class="fas fa-chart-line stat-icon"></i>
+            </div>
+            <div class="stat-value" id="global-diversity-score">-</div>
+            <div class="progress-container">
+                <div class="progress-label">
+                    <span>다양성 수준</span>
+                    <span id="diversity-level">-</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="diversity-progress"></div>
+                </div>
+            </div>
+            <div class="stat-description">
+                최근 예측들 간의 차이를 기반으로 계산된 다양성 지수입니다.
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-header">
+                <h3 class="stat-title">평균 차이값</h3>
+                <i class="fas fa-exchange-alt stat-icon"></i>
+            </div>
+            <div class="stat-value" id="average-difference">-</div>
+            <div class="stat-description">
+                연속된 예측 번호들 간의 평균 차이값입니다. 높을수록 더 다양한 예측을 의미합니다.
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-header">
+                <h3 class="stat-title">전체 예측 수</h3>
+                <i class="fas fa-database stat-icon"></i>
+            </div>
+            <div class="stat-value" id="total-predictions">-</div>
+            <div class="stat-description">
+                시스템에 저장된 총 예측 기록 수입니다. 중복 방지를 위한 참조 데이터로 사용됩니다.
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-header">
+                <h3 class="stat-title">활성 세션 수</h3>
+                <i class="fas fa-users stat-icon"></i>
+            </div>
+            <div class="stat-value" id="session-count">-</div>
+            <div class="stat-description">
+                현재 활성화된 사용자 세션 수입니다. 세션별 중복 방지가 적용됩니다.
+            </div>
+        </div>
+    </div>
+
+    <!-- 다양성 트렌드 차트 -->
+    <div class="chart-container">
+        <h3 class="chart-title">다양성 트렌드 차트</h3>
+        <canvas id="diversityTrendChart" width="800" height="300"></canvas>
+    </div>
+
+    <!-- 제어 패널 -->
+    <div class="controls-section">
+        <h2 class="controls-title">
+            <i class="fas fa-cogs"></i>
+            다양성 설정 관리
+        </h2>
+        
+        <div class="controls-grid">
+            <div class="control-group">
+                <label class="control-label" for="min-difference">최소 번호 차이</label>
+                <input type="number" id="min-difference" class="control-input" 
+                       min="1000" max="100000" step="1000" value="5000">
+                <div class="control-description">
+                    새로운 예측이 기존 예측과 가져야 하는 최소 차이값입니다. (1,000 ~ 100,000)
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label" for="cache-size">캐시 크기</label>
+                <input type="number" id="cache-size" class="control-input" 
+                       min="10" max="500" step="10" value="100">
+                <div class="control-description">
+                    전역 예측 캐시의 최대 크기입니다. 너무 크면 메모리 사용량이 증가합니다. (10 ~ 500)
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label" for="similarity-threshold">유사도 임계값</label>
+                <input type="number" id="similarity-threshold" class="control-input" 
+                       min="0.1" max="1.0" step="0.1" value="0.8">
+                <div class="control-description">
+                    예측 유사도 판단을 위한 임계값입니다. 낮을수록 더 엄격한 중복 검사를 수행합니다. (0.1 ~ 1.0)
+                </div>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button class="btn btn-primary" onclick="updateSettings()">
+                <i class="fas fa-save"></i>
+                설정 저장
+            </button>
+            <button class="btn btn-secondary" onclick="resetSettings()">
+                <i class="fas fa-undo"></i>
+                기본값 복원
+            </button>
+            <button class="btn btn-danger" onclick="clearCache()">
+                <i class="fas fa-trash"></i>
+                캐시 초기화
+            </button>
+        </div>
+    </div>
+
+    <!-- 최근 예측 목록 -->
+    <div class="recent-predictions">
+        <h3 class="predictions-title">
+            <i class="fas fa-history"></i>
+            최근 예측 번호
+        </h3>
+        <div class="predictions-list" id="recent-predictions-list">
+            <!-- 동적으로 생성됨 -->
+        </div>
+    </div>
+</div>
+
+<script>
+// 전역 변수
+let currentStats = null;
+let chartInstance = null;
+
+// 페이지 로드 시 초기화
+document.addEventListener('DOMContentLoaded', function() {
+    loadDiversityStats();
+    loadCurrentSettings();
+    
+    // 10초마다 자동 새로고침
+    setInterval(loadDiversityStats, 10000);
+});
+
+// 다양성 통계 로드
+async function loadDiversityStats() {
+    try {
+        showLoading(true);
+        
+        const response = await fetch('/api/diversity/stats');
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            currentStats = data.data;
+            updateStatsDisplay(data.data);
+            updateChart(data.data);
+            showLoading(false);
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        console.error('통계 로드 실패:', error);
+        showError('통계 데이터를 불러올 수 없습니다: ' + error.message);
+        showLoading(false);
+    }
+}
+
+// 현재 설정 로드
+async function loadCurrentSettings() {
+    try {
+        const response = await fetch('/api/diversity/settings');
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            const settings = data.data.current_settings;
+            document.getElementById('min-difference').value = settings.min_difference;
+            document.getElementById('cache-size').value = settings.cache_size;
+            document.getElementById('similarity-threshold').value = settings.similarity_threshold;
+        }
+    } catch (error) {
+        console.error('설정 로드 실패:', error);
+    }
+}
+
+// 통계 표시 업데이트
+function updateStatsDisplay(data) {
+    const globalDiv = data.global_diversity;
+    
+    // 전체 다양성 점수
+    if (globalDiv && globalDiv.diversity_score !== undefined) {
+        document.getElementById('global-diversity-score').textContent = 
+            globalDiv.diversity_score.toFixed(1) + '%';
+        
+        const progress = document.getElementById('diversity-progress');
+        progress.style.width = globalDiv.diversity_score + '%';
+        
+        // 다양성 수준 라벨
+        let level = '낮음';
+        if (globalDiv.diversity_score >= 80) level = '매우 높음';
+        else if (globalDiv.diversity_score >= 60) level = '높음';
+        else if (globalDiv.diversity_score >= 40) level = '보통';
+        
+        document.getElementById('diversity-level').textContent = level;
+        
+        // 색상 변경
+        if (globalDiv.diversity_score >= 80) {
+            progress.style.background = 'linear-gradient(90deg, #27ae60, #2ecc71)';
+        } else if (globalDiv.diversity_score >= 60) {
+            progress.style.background = 'linear-gradient(90deg, #f39c12, #e67e22)';
+        } else {
+            progress.style.background = 'linear-gradient(90deg, #e74c3c, #c0392b)';
+        }
+    }
+    
+    // 평균 차이값
+    if (globalDiv && globalDiv.average_difference !== undefined) {
+        document.getElementById('average-difference').textContent = 
+            parseInt(globalDiv.average_difference).toLocaleString();
+    }
+    
+    // 총 예측 수
+    if (globalDiv && globalDiv.total_predictions !== undefined) {
+        document.getElementById('total-predictions').textContent = 
+            globalDiv.total_predictions.toLocaleString();
+    }
+    
+    // 세션 수
+    if (data.system_info && data.system_info.session_count !== undefined) {
+        document.getElementById('session-count').textContent = 
+            data.system_info.session_count;
+    }
+    
+    // 최근 예측 목록 업데이트
+    updateRecentPredictions(globalDiv.recent_predictions);
+}
+
+// 최근 예측 목록 업데이트
+function updateRecentPredictions(predictions) {
+    const container = document.getElementById('recent-predictions-list');
+    container.innerHTML = '';
+    
+    if (predictions && predictions.length > 0) {
+        predictions.reverse().forEach(pred => {
+            const chip = document.createElement('div');
+            chip.className = 'prediction-chip';
+            chip.textContent = pred;
+            container.appendChild(chip);
+        });
+    } else {
+        container.innerHTML = '<div style="color: #666; text-align: center; width: 100%;">예측 기록이 없습니다</div>';
+    }
+}
+
+// 차트 업데이트
+function updateChart(data) {
+    const canvas = document.getElementById('diversityTrendChart');
+    const ctx = canvas.getContext('2d');
+    
+    // 캔버스 초기화
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    if (data.global_diversity && data.global_diversity.recent_predictions) {
+        const predictions = data.global_diversity.recent_predictions;
+        const width = canvas.width - 80;
+        const height = canvas.height - 80;
+        const startX = 40;
+        const startY = 40;
+        
+        // 축 그리기
+        ctx.strokeStyle = '#e9ecef';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(startX, startY + height);
+        ctx.lineTo(startX + width, startY + height);
+        ctx.stroke();
+        
+        // 데이터 포인트 그리기
+        if (predictions.length > 1) {
+            const maxVal = Math.max(...predictions.map(p => parseInt(p)));
+            const minVal = Math.min(...predictions.map(p => parseInt(p)));
+            const range = maxVal - minVal || 1;
+            
+            ctx.strokeStyle = '#667eea';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            
+            predictions.forEach((pred, index) => {
+                const x = startX + (index / (predictions.length - 1)) * width;
+                const normalizedVal = (parseInt(pred) - minVal) / range;
+                const y = startY + height - (normalizedVal * height);
+                
+                if (index === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+                
+                // 데이터 포인트 원
+                ctx.fillStyle = '#667eea';
+                ctx.beginPath();
+                ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+            
+            ctx.stroke();
+        }
+        
+        // 제목
+        ctx.fillStyle = '#2c3e50';
+        ctx.font = 'bold 16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('최근 예측 번호 변화 추이', canvas.width / 2, 25);
+    }
+}
+
+// 설정 업데이트
+async function updateSettings() {
+    try {
+        const settings = {
+            min_difference: parseInt(document.getElementById('min-difference').value),
+            cache_size: parseInt(document.getElementById('cache-size').value),
+            similarity_threshold: parseFloat(document.getElementById('similarity-threshold').value)
+        };
+        
+        const response = await fetch('/api/diversity/settings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(settings)
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            showSuccess('설정이 성공적으로 업데이트되었습니다');
+            loadDiversityStats(); // 통계 새로고침
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        showError('설정 업데이트 실패: ' + error.message);
+    }
+}
+
+// 설정 초기화
+function resetSettings() {
+    if (confirm('설정을 기본값으로 초기화하시겠습니까?')) {
+        document.getElementById('min-difference').value = 5000;
+        document.getElementById('cache-size').value = 100;
+        document.getElementById('similarity-threshold').value = 0.8;
+        
+        updateSettings();
+    }
+}
+
+// 캐시 초기화
+async function clearCache() {
+    if (!confirm('모든 예측 캐시를 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/diversity/reset', {
+            method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            showSuccess(`${data.data.cleared_predictions}개의 예측 기록이 초기화되었습니다`);
+            loadDiversityStats(); // 통계 새로고침
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        showError('캐시 초기화 실패: ' + error.message);
+    }
+}
+
+// UI 헬퍼 함수들
+function showSuccess(message) {
+    const alert = document.getElementById('alert-success');
+    document.getElementById('success-message').textContent = message;
+    alert.style.display = 'block';
+    
+    setTimeout(() => {
+        alert.style.display = 'none';
+    }, 5000);
+}
+
+function showError(message) {
+    const alert = document.getElementById('alert-error');
+    document.getElementById('error-message').textContent = message;
+    alert.style.display = 'block';
+    
+    setTimeout(() => {
+        alert.style.display = 'none';
+    }, 8000);
+}
+
+function showLoading(show) {
+    document.getElementById('loading').style.display = show ? 'block' : 'none';
+}
+</script>
+{% endblock %}
