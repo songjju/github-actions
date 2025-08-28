@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container history-container">
+    <h1 class="page-title">예측 기록</h1>
+    
+    <div class="history-table-wrapper">
+        <table class="history-table">
+            <thead>
+                <tr>
+                    <th>예측 회차</th>
+                    <th>예측 조</th>
+                    <th>예측 번호</th>
+                    <th>신뢰도</th>
+                    <th>실제 조</th>
+                    <th>실제 번호</th>
+                    <th>정확도</th>
+                    <th>예측일</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pred in predictions %}
+                <tr class="{% if pred.is_correct and pred.is_correct >= 3 %}success{% endif %}">
+                    <td>{{ pred.draw_no }}회</td>
+                    <td>{{ pred.predicted_jo }}조</td>
+                    <td class="number-cell">{{ pred.predicted_number }}</td>
+                    <td>{{ pred.confidence_score }}%</td>
+                    <td>{% if pred.actual_jo %}{{ pred.actual_jo }}조{% else %}-{% endif %}</td>
+                    <td class="number-cell">{% if pred.actual_number %}{{ pred.actual_number }}{% else %}-{% endif %}</td>
+                    <td>
+                        {% if pred.is_correct %}
+                            <span class="accuracy-badge">{{ pred.is_correct }}/6</span>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>{{ pred.created_at.strftime('%Y-%m-%d') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {% if not predictions %}
+    <div class="no-history">
+        <i class="fas fa-history"></i>
+        <p>아직 예측 기록이 없습니다.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container analysis-container">
+    <h1 class="page-title">심층 데이터 분석</h1>
+    
+    <div class="analysis-grid">
+        <!-- 패턴 분석 카드 -->
+        <div class="analysis-card">
+            <h2><i class="fas fa-fingerprint"></i> 수학적 패턴</h2>
+            <div class="pattern-details">
+                <div class="pattern-item">
+                    <span class="label">피보나치 평균:</span>
+                    <span class="value">{{ "%.2f"|format(patterns.fibonacci_avg) }}</span>
+                </div>
+                <div class="pattern-item">
+                    <span class="label">소수 평균:</span>
+                    <span class="value">{{ "%.2f"|format(patterns.prime_avg) }}</span>
+                </div>
+                <div class="pattern-item">
+                    <span class="label">주기성:</span>
+                    <span class="value">{{ "%.1f"|format(patterns.dominant_period) }}회</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 신뢰도 차트 -->
+        <div class="analysis-card">
+            <h2><i class="fas fa-chart-line"></i> 모델 신뢰도</h2>
+            <img src="{{ confidence_chart }}" alt="신뢰도 차트" class="analysis-chart">
+        </div>
+    </div>
+    
+    <div class="insights-section">
+        <h2><i class="fas fa-lightbulb"></i> AI 인사이트</h2>
+        <div class="insights-grid">
+            <div class="insight-card">
+                <div class="insight-icon">📈</div>
+                <div class="insight-content">
+                    <h3>상승 트렌드</h3>
+                    <p>최근 20회차 분석 결과, 번호가 상승 추세를 보이고 있습니다.</p>
+                </div>
+            </div>
+            <div class="insight-card">
+                <div class="insight-icon">🔄</div>
+                <div class="insight-content">
+                    <h3>주기적 패턴</h3>
+                    <p>평균 {{ "%.1f"|format(patterns.dominant_period) }}회 주기로 유사한 패턴이 반복됩니다.</p>
+                </div>
+            </div>
+            <div class="insight-card">
+                <div class="insight-icon">🎯</div>
+                <div class="insight-content">
+                    <h3>조 분포 편향</h3>
+                    <p>특정 조가 최근 과도하게 출현하여 조정이 예상됩니다.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

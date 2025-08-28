@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}연금복권 720+ AI 예측 시스템{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">
+                <i class="fas fa-ticket-alt"></i>
+                <span>연금복권 AI</span>
+            </a>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="/" class="nav-link">홈</a>
+                </li>
+                <li class="nav-item">
+                    <a href="/predict" class="nav-link">예측하기</a>
+                </li>
+                <li class="nav-item">
+                    <a href="/analysis" class="nav-link">분석</a>
+                </li>
+                <li class="nav-item">
+                    <a href="/history" class="nav-link">기록</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <div class="footer-container">
+            <div class="footer-info">
+                <p>※ 이 시스템은 AI 기반 통계 분석 도구입니다.</p>
+                <p>※ 실제 당첨을 보장하지 않으며, 과도한 복권 구매는 재정적 문제를 일으킬 수 있습니다.</p>
+                <p>© 2024 연금복권 AI 예측 시스템. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>
