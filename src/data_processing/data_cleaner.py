@@ -228,7 +228,7 @@ class LottoDataCleaner:
         for col in number_columns:
             if col in df.columns:
                 # 문자열에서 숫자 추출
-                df[col] = df[col].astype(str).str.extract('(\d+)').astype(float)
+                df[col] = df[col].astype(str).str.extract(r'(\d+)').astype(float)
                 
                 # 유효 범위 확인 (1-45)
                 invalid_mask = (df[col] < 1) | (df[col] > 45) | df[col].isna()
