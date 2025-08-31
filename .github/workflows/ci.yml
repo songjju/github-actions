@@ -127,9 +127,15 @@ jobs:
           file: ${{ env.WORKING_DIRECTORY }}/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
-          platforms: linux/amd64,linux/arm64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+          cache-from: |
+            type=gha
+            type=registry,ref=${{ env.IMAGE_NAME }}:cache
+          cache-to: |
+            type=gha,mode=max
+            type=registry,ref=${{ env.IMAGE_NAME }}:cache,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
 
       - name: Image vulnerability scan
         uses: aquasecurity/trivy-action@0.28.0  # 특정 버전 고정
