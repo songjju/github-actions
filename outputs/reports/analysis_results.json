@@ -1,0 +1,173 @@
+{
+  "basic_statistics": {
+    "basic_info": {
+      "total_draws": 0,
+      "total_numbers_drawn": 0,
+      "latest_round": null,
+      "oldest_round": null,
+      "data_completeness": {
+        "missing_rounds_count": 0,
+        "missing_rounds": [],
+        "completeness_ratio": 0
+      },
+      "unique_combinations": 0,
+      "duplicate_combinations": 0
+    },
+    "frequency_analysis": {
+      "total_numbers_drawn": 0,
+      "frequency_count": {},
+      "frequency_probability": {},
+      "most_frequent_numbers": [],
+      "least_frequent_numbers": [],
+      "hot_numbers": [],
+      "cold_numbers": [],
+      "theoretical_deviation": {},
+      "recent_appearance": {},
+      "chi_square_test": {
+        "chi_square": 0,
+        "p_value": 1
+      }
+    },
+    "pattern_analysis": {
+      "consecutive_patterns": {
+        "consecutive_frequency": {},
+        "avg_consecutive_per_draw": NaN,
+        "max_consecutive_in_draw": 0,
+        "examples": []
+      },
+      "odd_even_patterns": {
+        "odd_count_distribution": {},
+        "most_common_odd_count": null,
+        "odd_even_ratio": NaN,
+        "balance_score": NaN
+      },
+      "section_patterns": {
+        "pattern_distribution": {},
+        "most_common_pattern": null,
+        "avg_distribution": {
+          "low": NaN,
+          "mid": NaN,
+          "high": NaN
+        }
+      },
+      "sum_patterns": {
+        "sum_statistics": {
+          "mean": 0,
+          "median": 0,
+          "std": 0,
+          "min": 0,
+          "max": 0
+        },
+        "sum_categories": {
+          "very_low": 0,
+          "low": 0,
+          "normal": 0,
+          "high": 0,
+          "very_high": 0
+        },
+        "normal_range_ratio": 0.0
+      },
+      "gap_patterns": {
+        "gap_distribution": {},
+        "most_common_gaps": [],
+        "avg_gap": NaN,
+        "gap_variance": NaN
+      },
+      "sequence_patterns": {
+        "arithmetic_sequences": 0,
+        "arithmetic_ratio": 0.0,
+        "geometric_sequences": 0
+      }
+    },
+    "distribution_analysis": {
+      "sum_distribution": {
+        "mean": 0,
+        "std": 0,
+        "min": 0,
+        "max": 0,
+        "median": 0,
+        "quartiles": {
+          "q1": 0,
+          "q3": 0
+        }
+      },
+      "section_distribution": {
+        "low": 0,
+        "mid": 0,
+        "high": 0
+      },
+      "section_percentages": {
+        "low": 0,
+        "mid": 0,
+        "high": 0
+      },
+      "odd_even_distribution": {
+        "odd_counts": {},
+        "most_common_odd_count": null,
+        "avg_odd_count": 0,
+        "avg_even_count": 6
+      }
+    },
+    "trend_analysis": {},
+    "correlation_analysis": {
+      "numeric_correlations": {
+        "number_sum": {
+          "number_sum": NaN,
+          "odd_count": NaN,
+          "even_count": NaN,
+          "low_count": NaN,
+          "mid_count": NaN,
+          "high_count": NaN
+        },
+        "odd_count": {
+          "number_sum": NaN,
+          "odd_count": NaN,
+          "even_count": NaN,
+          "low_count": NaN,
+          "mid_count": NaN,
+          "high_count": NaN
+        },
+        "even_count": {
+          "number_sum": NaN,
+          "odd_count": NaN,
+          "even_count": NaN,
+          "low_count": NaN,
+          "mid_count": NaN,
+          "high_count": NaN
+        },
+        "low_count": {
+          "number_sum": NaN,
+          "odd_count": NaN,
+          "even_count": NaN,
+          "low_count": NaN,
+          "mid_count": NaN,
+          "high_count": NaN
+        },
+        "mid_count": {
+          "number_sum": NaN,
+          "odd_count": NaN,
+          "even_count": NaN,
+          "low_count": NaN,
+          "mid_count": NaN,
+          "high_count": NaN
+        },
+        "high_count": {
+          "number_sum": NaN,
+          "odd_count": NaN,
+          "even_count": NaN,
+          "low_count": NaN,
+          "mid_count": NaN,
+          "high_count": NaN
+        }
+      },
+      "number_cooccurrence": {
+        "most_common_pairs": [],
+        "top_companions": {},
+        "total_pair_combinations": 0
+      }
+    },
+    "most_frequent_numbers": [],
+    "least_frequent_numbers": [],
+    "odd_even_ratio": 0.0
+  }
+}

@@ -1,0 +1,153 @@
+2025-08-31 13:18:57 - LottoPredictionSystem - INFO - logger:setup_logging:115 - 로깅 시스템 초기화 완료
+2025-08-31 13:21:16 - LottoPredictionSystem - INFO - logger:setup_logging:115 - 로깅 시스템 초기화 완료
+2025-08-31 13:21:16 - LottoPredictionSystem - INFO - logger:log_system_info:139 - === 시스템 정보 ===
+2025-08-31 13:21:16 - LottoPredictionSystem - INFO - logger:log_system_info:140 - Python 버전: 3.11.13
+2025-08-31 13:21:16 - LottoPredictionSystem - INFO - logger:log_system_info:141 - 플랫폼: Linux-6.8.0-79-generic-x86_64-with-glibc2.39
+2025-08-31 13:21:16 - LottoPredictionSystem - INFO - logger:log_system_info:142 - CPU 개수: 4
+2025-08-31 13:21:16 - LottoPredictionSystem - INFO - logger:log_system_info:143 - 메모리: 3GB
+2025-08-31 13:21:16 - LottoPredictionSystem - INFO - logger:log_system_info:144 - 로그 디렉토리: /home/ssj4358/github-actions/lotto/logs
+2025-08-31 13:21:16 - LottoPredictionSystem.main - INFO - main:main:419 - 로또 예측 시스템 시작
+2025-08-31 13:21:16 - LottoPredictionSystem.main - INFO - main:main:430 - 데이터 로딩 시작
+2025-08-31 13:25:33 - LottoPredictionSystem - INFO - logger:setup_logging:115 - 로깅 시스템 초기화 완료
+2025-08-31 13:25:33 - LottoPredictionSystem - INFO - logger:log_system_info:139 - === 시스템 정보 ===
+2025-08-31 13:25:33 - LottoPredictionSystem - INFO - logger:log_system_info:140 - Python 버전: 3.11.13
+2025-08-31 13:25:33 - LottoPredictionSystem - INFO - logger:log_system_info:141 - 플랫폼: Linux-6.8.0-79-generic-x86_64-with-glibc2.39
+2025-08-31 13:25:33 - LottoPredictionSystem - INFO - logger:log_system_info:142 - CPU 개수: 4
+2025-08-31 13:25:33 - LottoPredictionSystem - INFO - logger:log_system_info:143 - 메모리: 3GB
+2025-08-31 13:25:33 - LottoPredictionSystem - INFO - logger:log_system_info:144 - 로그 디렉토리: /home/ssj4358/github-actions/lotto/logs
+2025-08-31 13:25:33 - LottoPredictionSystem.main - INFO - main:main:419 - 로또 예측 시스템 시작
+2025-08-31 13:25:33 - LottoPredictionSystem.main - INFO - main:main:430 - 데이터 로딩 시작
+2025-08-31 16:25:17 - LottoPredictionSystem - INFO - logger:setup_logging:115 - 로깅 시스템 초기화 완료
+2025-08-31 16:25:17 - LottoPredictionSystem - INFO - logger:log_system_info:139 - === 시스템 정보 ===
+2025-08-31 16:25:17 - LottoPredictionSystem - INFO - logger:log_system_info:140 - Python 버전: 3.11.13
+2025-08-31 16:25:17 - LottoPredictionSystem - INFO - logger:log_system_info:141 - 플랫폼: Linux-6.8.0-79-generic-x86_64-with-glibc2.39
+2025-08-31 16:25:17 - LottoPredictionSystem - INFO - logger:log_system_info:142 - CPU 개수: 4
+2025-08-31 16:25:17 - LottoPredictionSystem - INFO - logger:log_system_info:143 - 메모리: 3GB
+2025-08-31 16:25:17 - LottoPredictionSystem - INFO - logger:log_system_info:144 - 로그 디렉토리: /home/ssj4358/github-actions/lotto/logs
+2025-08-31 16:25:17 - LottoPredictionSystem.main - INFO - main:main:419 - 로또 예측 시스템 시작
+2025-08-31 16:25:17 - LottoPredictionSystem.main - INFO - main:main:430 - 데이터 로딩 시작
+2025-08-31 16:34:27 - LottoPredictionSystem - INFO - logger:setup_logging:115 - 로깅 시스템 초기화 완료
+2025-08-31 16:34:27 - LottoPredictionSystem - INFO - logger:log_system_info:139 - === 시스템 정보 ===
+2025-08-31 16:34:27 - LottoPredictionSystem - INFO - logger:log_system_info:140 - Python 버전: 3.11.13
+2025-08-31 16:34:27 - LottoPredictionSystem - INFO - logger:log_system_info:141 - 플랫폼: Linux-6.8.0-79-generic-x86_64-with-glibc2.39
+2025-08-31 16:34:27 - LottoPredictionSystem - INFO - logger:log_system_info:142 - CPU 개수: 4
+2025-08-31 16:34:27 - LottoPredictionSystem - INFO - logger:log_system_info:143 - 메모리: 3GB
+2025-08-31 16:34:27 - LottoPredictionSystem - INFO - logger:log_system_info:144 - 로그 디렉토리: /home/ssj4358/github-actions/lotto/logs
+2025-08-31 16:34:27 - LottoPredictionSystem.main - INFO - main:main:419 - 로또 예측 시스템 시작
+2025-08-31 16:34:27 - LottoPredictionSystem.main - INFO - main:main:430 - 데이터 로딩 시작
+2025-08-31 16:40:29 - LottoPredictionSystem - INFO - logger:setup_logging:115 - 로깅 시스템 초기화 완료
+2025-08-31 16:40:29 - LottoPredictionSystem - INFO - logger:log_system_info:139 - === 시스템 정보 ===
+2025-08-31 16:40:29 - LottoPredictionSystem - INFO - logger:log_system_info:140 - Python 버전: 3.11.13
+2025-08-31 16:40:29 - LottoPredictionSystem - INFO - logger:log_system_info:141 - 플랫폼: Linux-6.8.0-79-generic-x86_64-with-glibc2.39
+2025-08-31 16:40:29 - LottoPredictionSystem - INFO - logger:log_system_info:142 - CPU 개수: 4
+2025-08-31 16:40:29 - LottoPredictionSystem - INFO - logger:log_system_info:143 - 메모리: 3GB
+2025-08-31 16:40:29 - LottoPredictionSystem - INFO - logger:log_system_info:144 - 로그 디렉토리: /home/ssj4358/github-actions/lotto/logs
+2025-08-31 16:40:29 - LottoPredictionSystem.main - INFO - main:main:419 - 로또 예측 시스템 시작
+2025-08-31 16:40:29 - LottoPredictionSystem.main - INFO - main:main:430 - 데이터 로딩 시작
+2025-08-31 16:42:01 - LottoPredictionSystem - INFO - logger:setup_logging:115 - 로깅 시스템 초기화 완료
+2025-08-31 16:42:01 - LottoPredictionSystem - INFO - logger:log_system_info:139 - === 시스템 정보 ===
+2025-08-31 16:42:01 - LottoPredictionSystem - INFO - logger:log_system_info:140 - Python 버전: 3.11.13
+2025-08-31 16:42:01 - LottoPredictionSystem - INFO - logger:log_system_info:141 - 플랫폼: Linux-6.8.0-79-generic-x86_64-with-glibc2.39
+2025-08-31 16:42:01 - LottoPredictionSystem - INFO - logger:log_system_info:142 - CPU 개수: 4
+2025-08-31 16:42:01 - LottoPredictionSystem - INFO - logger:log_system_info:143 - 메모리: 3GB
+2025-08-31 16:42:01 - LottoPredictionSystem - INFO - logger:log_system_info:144 - 로그 디렉토리: /home/ssj4358/github-actions/lotto/logs
+2025-08-31 16:42:01 - LottoPredictionSystem.main - INFO - main:main:419 - 로또 예측 시스템 시작
+2025-08-31 16:42:01 - LottoPredictionSystem.main - INFO - main:main:430 - 데이터 로딩 시작
+2025-08-31 16:45:47 - LottoPredictionSystem - INFO - logger:setup_logging:115 - 로깅 시스템 초기화 완료
+2025-08-31 16:45:47 - LottoPredictionSystem - INFO - logger:log_system_info:139 - === 시스템 정보 ===
+2025-08-31 16:45:47 - LottoPredictionSystem - INFO - logger:log_system_info:140 - Python 버전: 3.11.13
+2025-08-31 16:45:47 - LottoPredictionSystem - INFO - logger:log_system_info:141 - 플랫폼: Linux-6.8.0-79-generic-x86_64-with-glibc2.39
+2025-08-31 16:45:47 - LottoPredictionSystem - INFO - logger:log_system_info:142 - CPU 개수: 4
+2025-08-31 16:45:47 - LottoPredictionSystem - INFO - logger:log_system_info:143 - 메모리: 3GB
+2025-08-31 16:45:47 - LottoPredictionSystem - INFO - logger:log_system_info:144 - 로그 디렉토리: /home/ssj4358/github-actions/lotto/logs
+2025-08-31 16:45:47 - LottoPredictionSystem.main - INFO - main:main:419 - 로또 예측 시스템 시작
+2025-08-31 16:45:47 - LottoPredictionSystem.main - INFO - main:main:430 - 데이터 로딩 시작
+2025-08-31 16:45:48 - LottoPredictionSystem.main - INFO - main:run_prediction_pipeline:116 - 천재적 통찰 공식 초기화
+2025-08-31 16:45:48 - LottoPredictionSystem.main - INFO - main:run_prediction_pipeline:120 - 앙상블 예측 시스템 초기화
+2025-08-31 16:45:48 - LottoPredictionSystem.main - INFO - main:run_prediction_pipeline:124 - 예측 합성기 초기화
+2025-08-31 16:45:48 - LottoPredictionSystem.main - INFO - main:run_prediction_pipeline:128 - 신뢰도 계산기 초기화
+2025-08-31 16:45:48 - LottoPredictionSystem.main - INFO - main:run_prediction_pipeline:132 - 5개 예측 생성 시작
+2025-08-31 16:45:48 - LottoPredictionSystem.main - ERROR - main:run_prediction_pipeline:164 - 예측 파이프라인 오류: 'ConfidenceCalculator' object has no attribute 'calculate_comprehensive_confidence'
+2025-08-31 16:50:43 - LottoPredictionSystem - INFO - logger:setup_logging:115 - 로깅 시스템 초기화 완료
+2025-08-31 16:50:43 - LottoPredictionSystem - INFO - logger:log_system_info:139 - === 시스템 정보 ===
+2025-08-31 16:50:43 - LottoPredictionSystem - INFO - logger:log_system_info:140 - Python 버전: 3.11.13
+2025-08-31 16:50:43 - LottoPredictionSystem - INFO - logger:log_system_info:141 - 플랫폼: Linux-6.8.0-79-generic-x86_64-with-glibc2.39
+2025-08-31 16:50:43 - LottoPredictionSystem - INFO - logger:log_system_info:142 - CPU 개수: 4
+2025-08-31 16:50:43 - LottoPredictionSystem - INFO - logger:log_system_info:143 - 메모리: 3GB
+2025-08-31 16:50:43 - LottoPredictionSystem - INFO - logger:log_system_info:144 - 로그 디렉토리: /home/ssj4358/github-actions/lotto/logs
+2025-08-31 16:50:43 - LottoPredictionSystem.main - INFO - main:main:427 - 로또 예측 시스템 시작
+2025-08-31 16:50:43 - LottoPredictionSystem.main - INFO - main:main:438 - 데이터 로딩 시작
+2025-08-31 16:50:43 - LottoPredictionSystem.main - INFO - main:run_prediction_pipeline:116 - 천재적 통찰 공식 초기화
+2025-08-31 16:50:43 - LottoPredictionSystem.main - INFO - main:run_prediction_pipeline:120 - 앙상블 예측 시스템 초기화
+2025-08-31 16:50:43 - LottoPredictionSystem.main - INFO - main:run_prediction_pipeline:124 - 예측 합성기 초기화
+2025-08-31 16:50:43 - LottoPredictionSystem.main - INFO - main:run_prediction_pipeline:128 - 신뢰도 계산기 초기화
+2025-08-31 16:50:43 - LottoPredictionSystem.main - INFO - main:run_prediction_pipeline:132 - 5개 예측 생성 시작
+2025-08-31 16:50:44 - LottoPredictionSystem.main - ERROR - main:run_prediction_pipeline:172 - 예측 파이프라인 오류: 'final_numbers'
+2025-08-31 16:53:58 - LottoPredictionSystem - INFO - logger:setup_logging:115 - 로깅 시스템 초기화 완료
+2025-08-31 16:53:58 - LottoPredictionSystem - INFO - logger:log_system_info:139 - === 시스템 정보 ===
+2025-08-31 16:53:58 - LottoPredictionSystem - INFO - logger:log_system_info:140 - Python 버전: 3.11.13
+2025-08-31 16:53:58 - LottoPredictionSystem - INFO - logger:log_system_info:141 - 플랫폼: Linux-6.8.0-79-generic-x86_64-with-glibc2.39
+2025-08-31 16:53:58 - LottoPredictionSystem - INFO - logger:log_system_info:142 - CPU 개수: 4
+2025-08-31 16:53:58 - LottoPredictionSystem - INFO - logger:log_system_info:143 - 메모리: 3GB
+2025-08-31 16:53:58 - LottoPredictionSystem - INFO - logger:log_system_info:144 - 로그 디렉토리: /home/ssj4358/github-actions/lotto/logs
+2025-08-31 16:53:58 - LottoPredictionSystem.main - INFO - main:main:427 - 로또 예측 시스템 시작
+2025-08-31 16:53:58 - LottoPredictionSystem.main - INFO - main:main:438 - 데이터 로딩 시작
+2025-08-31 16:53:58 - LottoPredictionSystem.main - INFO - main:run_prediction_pipeline:116 - 천재적 통찰 공식 초기화
+2025-08-31 16:53:58 - LottoPredictionSystem.main - INFO - main:run_prediction_pipeline:120 - 앙상블 예측 시스템 초기화
+2025-08-31 16:53:58 - LottoPredictionSystem.main - INFO - main:run_prediction_pipeline:124 - 예측 합성기 초기화
+2025-08-31 16:53:58 - LottoPredictionSystem.main - INFO - main:run_prediction_pipeline:128 - 신뢰도 계산기 초기화
+2025-08-31 16:53:58 - LottoPredictionSystem.main - INFO - main:run_prediction_pipeline:132 - 5개 예측 생성 시작
+2025-08-31 16:53:58 - LottoPredictionSystem.main - INFO - main:save_detailed_results:392 - 모든 결과 파일 저장 완료
+2025-08-31 16:53:58 - LottoPredictionSystem.main - INFO - main:generate_comprehensive_report:218 - 종합 리포트 생성 시작
+2025-08-31 16:53:58 - LottoPredictionSystem.main - INFO - main:generate_comprehensive_report:327 - 종합 리포트 저장: outputs/reports/analysis_report.html
+2025-08-31 16:55:09 - LottoPredictionSystem - INFO - logger:setup_logging:115 - 로깅 시스템 초기화 완료
+2025-08-31 16:55:09 - LottoPredictionSystem - INFO - logger:log_system_info:139 - === 시스템 정보 ===
+2025-08-31 16:55:09 - LottoPredictionSystem - INFO - logger:log_system_info:140 - Python 버전: 3.11.13
+2025-08-31 16:55:09 - LottoPredictionSystem - INFO - logger:log_system_info:141 - 플랫폼: Linux-6.8.0-79-generic-x86_64-with-glibc2.39
+2025-08-31 16:55:09 - LottoPredictionSystem - INFO - logger:log_system_info:142 - CPU 개수: 4
+2025-08-31 16:55:09 - LottoPredictionSystem - INFO - logger:log_system_info:143 - 메모리: 3GB
+2025-08-31 16:55:09 - LottoPredictionSystem - INFO - logger:log_system_info:144 - 로그 디렉토리: /home/ssj4358/github-actions/lotto/logs
+2025-08-31 16:55:09 - LottoPredictionSystem.main - INFO - main:main:427 - 로또 예측 시스템 시작
+2025-08-31 16:55:09 - LottoPredictionSystem.main - INFO - main:main:438 - 데이터 로딩 시작
+2025-08-31 16:55:09 - LottoPredictionSystem.main - INFO - main:run_prediction_pipeline:116 - 천재적 통찰 공식 초기화
+2025-08-31 16:55:09 - LottoPredictionSystem.main - INFO - main:run_prediction_pipeline:120 - 앙상블 예측 시스템 초기화
+2025-08-31 16:55:09 - LottoPredictionSystem.main - INFO - main:run_prediction_pipeline:124 - 예측 합성기 초기화
+2025-08-31 16:55:09 - LottoPredictionSystem.main - INFO - main:run_prediction_pipeline:128 - 신뢰도 계산기 초기화
+2025-08-31 16:55:09 - LottoPredictionSystem.main - INFO - main:run_prediction_pipeline:132 - 5개 예측 생성 시작
+2025-08-31 16:55:09 - LottoPredictionSystem.main - INFO - main:save_detailed_results:392 - 모든 결과 파일 저장 완료
+2025-08-31 16:55:09 - LottoPredictionSystem.main - INFO - main:generate_comprehensive_report:218 - 종합 리포트 생성 시작
+2025-08-31 16:55:09 - LottoPredictionSystem.main - INFO - main:generate_comprehensive_report:327 - 종합 리포트 저장: outputs/reports/analysis_report.html
+2025-08-31 16:59:12 - LottoPredictionSystem - INFO - logger:setup_logging:115 - 로깅 시스템 초기화 완료
+2025-08-31 16:59:12 - LottoPredictionSystem - INFO - logger:log_system_info:139 - === 시스템 정보 ===
+2025-08-31 16:59:12 - LottoPredictionSystem - INFO - logger:log_system_info:140 - Python 버전: 3.11.13
+2025-08-31 16:59:12 - LottoPredictionSystem - INFO - logger:log_system_info:141 - 플랫폼: Linux-6.8.0-79-generic-x86_64-with-glibc2.39
+2025-08-31 16:59:12 - LottoPredictionSystem - INFO - logger:log_system_info:142 - CPU 개수: 4
+2025-08-31 16:59:12 - LottoPredictionSystem - INFO - logger:log_system_info:143 - 메모리: 3GB
+2025-08-31 16:59:12 - LottoPredictionSystem - INFO - logger:log_system_info:144 - 로그 디렉토리: /home/ssj4358/github-actions/lotto/logs
+2025-08-31 16:59:12 - LottoPredictionSystem.main - INFO - main:main:430 - 로또 예측 시스템 시작
+2025-08-31 16:59:12 - LottoPredictionSystem.main - INFO - main:main:441 - 데이터 로딩 시작
+2025-08-31 16:59:12 - LottoPredictionSystem.main - INFO - main:run_prediction_pipeline:116 - 천재적 통찰 공식 초기화
+2025-08-31 16:59:12 - LottoPredictionSystem.main - INFO - main:run_prediction_pipeline:120 - 앙상블 예측 시스템 초기화
+2025-08-31 16:59:12 - LottoPredictionSystem.main - INFO - main:run_prediction_pipeline:124 - 예측 합성기 초기화
+2025-08-31 16:59:12 - LottoPredictionSystem.main - INFO - main:run_prediction_pipeline:128 - 신뢰도 계산기 초기화
+2025-08-31 16:59:12 - LottoPredictionSystem.main - INFO - main:run_prediction_pipeline:132 - 5개 예측 생성 시작
+2025-08-31 16:59:12 - LottoPredictionSystem.main - INFO - main:save_detailed_results:395 - 모든 결과 파일 저장 완료
+2025-08-31 16:59:12 - LottoPredictionSystem.main - INFO - main:generate_comprehensive_report:218 - 종합 리포트 생성 시작
+2025-08-31 16:59:12 - LottoPredictionSystem.main - INFO - main:generate_comprehensive_report:327 - 종합 리포트 저장: outputs/reports/analysis_report.html
+2025-08-31 17:01:03 - LottoPredictionSystem - INFO - logger:setup_logging:115 - 로깅 시스템 초기화 완료
+2025-08-31 17:01:03 - LottoPredictionSystem - INFO - logger:log_system_info:139 - === 시스템 정보 ===
+2025-08-31 17:01:03 - LottoPredictionSystem - INFO - logger:log_system_info:140 - Python 버전: 3.11.13
+2025-08-31 17:01:03 - LottoPredictionSystem - INFO - logger:log_system_info:141 - 플랫폼: Linux-6.8.0-79-generic-x86_64-with-glibc2.39
+2025-08-31 17:01:03 - LottoPredictionSystem - INFO - logger:log_system_info:142 - CPU 개수: 4
+2025-08-31 17:01:03 - LottoPredictionSystem - INFO - logger:log_system_info:143 - 메모리: 3GB
+2025-08-31 17:01:03 - LottoPredictionSystem - INFO - logger:log_system_info:144 - 로그 디렉토리: /home/ssj4358/github-actions/lotto/logs
+2025-08-31 17:01:03 - LottoPredictionSystem.main - INFO - main:main:432 - 로또 예측 시스템 시작
+2025-08-31 17:01:03 - LottoPredictionSystem.main - INFO - main:main:443 - 데이터 로딩 시작
+2025-08-31 17:01:03 - LottoPredictionSystem.main - INFO - main:run_prediction_pipeline:116 - 천재적 통찰 공식 초기화
+2025-08-31 17:01:03 - LottoPredictionSystem.main - INFO - main:run_prediction_pipeline:120 - 앙상블 예측 시스템 초기화
+2025-08-31 17:01:03 - LottoPredictionSystem.main - INFO - main:run_prediction_pipeline:124 - 예측 합성기 초기화
+2025-08-31 17:01:03 - LottoPredictionSystem.main - INFO - main:run_prediction_pipeline:128 - 신뢰도 계산기 초기화
+2025-08-31 17:01:03 - LottoPredictionSystem.main - INFO - main:run_prediction_pipeline:132 - 5개 예측 생성 시작
+2025-08-31 17:01:03 - LottoPredictionSystem.main - INFO - main:save_detailed_results:397 - 모든 결과 파일 저장 완료
+2025-08-31 17:01:03 - LottoPredictionSystem.main - INFO - main:generate_comprehensive_report:218 - 종합 리포트 생성 시작
+2025-08-31 17:01:03 - LottoPredictionSystem.main - INFO - main:generate_comprehensive_report:327 - 종합 리포트 저장: outputs/reports/analysis_report.html
