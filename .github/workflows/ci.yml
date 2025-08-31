@@ -140,7 +140,7 @@ jobs:
       - name: Image vulnerability scan
         uses: aquasecurity/trivy-action@0.28.0  # 특정 버전 고정
         with:
-          image-ref: ghcr.io/${{ github.repository_owner }}/lotto-720-predictor:${{ needs.build-and-test.outputs.version-tag }}
+          image-ref: ${{ env.IMAGE_NAME }}:${{ needs.build-and-test.outputs.version-tag }}
           format: 'table'
           exit-code: '1'  # 취약점 발견시 실패로 처리
           severity: 'CRITICAL,HIGH,MEDIUM'  # 중요도별 필터링
@@ -151,7 +151,7 @@ jobs:
         uses: aquasecurity/trivy-action@0.28.0  # 특정 버전 고정
         if: github.event_name == 'push'  # Only run on push, not PR
         with:
-          image-ref: ghcr.io/${{ github.repository_owner }}/lotto-720-predictor:${{ needs.build-and-test.outputs.version-tag }}
+          image-ref: ${{ env.IMAGE_NAME }}:${{ needs.build-and-test.outputs.version-tag }}
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH,MEDIUM'  # 일관된 심각도 수준
