@@ -1,13 +1,12 @@
-# 최적화된 Dockerfile
+# === 빌드 단계 ===
 FROM python:3.11-slim AS builder
 
-# 빌드 의존성만 설치
+# 빌드 의존성 설치
 RUN apt-get update && apt-get install -y \
     build-essential \
     gfortran \
-    libatlas-base-dev \
+    libopenblas-dev \
     liblapack-dev \
-    libblas-dev \
     libffi-dev \
     libjpeg-dev \
     zlib1g-dev \
@@ -15,25 +14,24 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# 캐싱을 위해 requirements.txt 먼저 복사
+# requirements.txt 먼저 복사
 COPY requirements.txt .
 
-# 의존성 설치 (빌드 단계)
-RUN pip install --no-cache-dir -r requirements.txt
+# 의존성 설치 (빌드 캐시 활용)
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 # === 실행 단계 ===
-FROM python:3.11-alpine AS runtime
+FROM python:3.11-slim AS runtime
 
 # 런타임 사용자 생성
-RUN adduser -D -s /bin/sh lotto
+RUN useradd -m lotto
 
 WORKDIR /app
 
-# 빌드된 패키지만 복사
-COPY --from=builder /root/.local /home/lotto/.local
-ENV PATH=/home/lotto/.local/bin:$PATH
+# 빌드된 패키지 복사
+COPY --from=builder /install /usr/local
 
-# 애플리케이션 코드 복사 (마지막에!)
+# 애플리케이션 코드 복사
 COPY --chown=lotto:lotto . .
 
 USER lotto
