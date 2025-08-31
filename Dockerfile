@@ -2,8 +2,16 @@
 FROM python:3.11-alpine AS builder
 
 # 빌드 의존성만 설치
-RUN apk add --no-cache --virtual .build-deps \
-    gcc musl-dev libffi-dev openssl-dev
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    gfortran \
+    libatlas-base-dev \
+    liblapack-dev \
+    libblas-dev \
+    libffi-dev \
+    libjpeg-dev \
+    zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
