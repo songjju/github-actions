@@ -1,5 +1,5 @@
 # 최적화된 Dockerfile
-FROM python:3.11-alpine AS builder
+FROM python:3.11
 
 # 빌드 의존성만 설치
 RUN apt-get update && apt-get install -y \
