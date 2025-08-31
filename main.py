@@ -185,7 +185,7 @@ def validate_system_components(lotto_data, config, logger):
             'data_loader': LottoDataLoader(Config.DATA_FILE_PATH),
             'statistics_analyzer': BasicStatistics(lotto_data),
             'pattern_detector': LottoPatternDetector(),
-            'frequency_analyzer': FrequencyAnalyzer(),
+            'frequency_analyzer': LottoFrequencyAnalyzer(),
             'timeseries_analyzer': LottoTimeSeriesAnalyzer(),
             'predictor': EnsemblePredictor(lotto_data, {})
         }
