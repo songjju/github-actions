@@ -11,7 +11,7 @@ WORKDIR /app
 COPY requirements.txt .
 
 # 의존성 설치 (빌드 단계)
-RUN pip install --user --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # === 실행 단계 ===
 FROM python:3.11-alpine AS runtime
