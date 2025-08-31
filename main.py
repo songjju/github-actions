@@ -521,11 +521,14 @@ def main():
         if args.visualize:
             print("\n9️⃣ 결과 시각화")
             try:
-                # visualizer가 완전히 구현되면 활성화
-                print("⚠️ 시각화 기능은 visualizer.py 수정 후 사용 가능합니다")
-                # visualizer = LottoVisualizer()
-                # charts = visualizer.create_prediction_charts(predictions, analysis_results)
-                # print(f"시각화 완료: {len(charts)}개 차트 생성")
+                from src.utils.visualizer import LottoVisualizer  # 여기서 임포트
+                
+                visualizer = LottoVisualizer()
+                charts = visualizer.create_comprehensive_report(
+                    cleaned_data, analysis_results, predictions
+                )
+                print(f"시각화 완료: visualizations 폴더에 차트 생성")
+                
             except Exception as e:
                 logger.warning(f"시각화 오류: {e}")
                 print(f"⚠️ 시각화 중 오류: {e}")

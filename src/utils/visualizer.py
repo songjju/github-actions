@@ -55,30 +55,15 @@ class LottoVisualizer:
         
         # 한글 폰트 설정 시도
         try:
-            # 일반적인 한글 폰트들 시도
-            korean_fonts = [
-                'Malgun Gothic',
-                'AppleGothic', 
-                'Noto Sans CJK KR',
-                'DejaVu Sans'
-            ]
-            
-            for font_name in korean_fonts:
-                try:
-                    plt.rcParams['font.family'] = font_name
-                    # 테스트 문자 렌더링
-                    fig, ax = plt.subplots(figsize=(1, 1))
-                    ax.text(0.5, 0.5, '한글테스트', fontfamily=font_name)
-                    plt.close(fig)
-                    print(f"한글 폰트 설정 완료: {font_name}")
-                    break
-                except:
-                    continue
-            else:
-                print("한글 폰트를 찾을 수 없어 기본 폰트 사용")
-                
+            # 안전한 폰트 설정 (한글 폰트 대신 기본 폰트 사용)
+            plt.rcParams['font.family'] = ['DejaVu Sans']
+            plt.rcParams['axes.unicode_minus'] = False
+            print("기본 폰트 설정 완료")
+                    
         except Exception as e:
             print(f"폰트 설정 중 오류: {e}")
+            # 기본값으로 fallback
+            plt.rcParams['font.family'] = 'sans-serif'
         
         # 기본 시각화 설정
         plt.rcParams['figure.figsize'] = (12, 8)
@@ -89,7 +74,10 @@ class LottoVisualizer:
         plt.rcParams['savefig.bbox'] = 'tight'
         
         # Seaborn 설정
-        sns.set_palette("husl")
+        try:
+            sns.set_palette("husl")
+        except:
+            pass  # seaborn이 없거나 오류 시 무시
         
     def create_comprehensive_report(self, 
                                     lotto_data: pd.DataFrame,
@@ -451,29 +439,46 @@ class StatisticsPlotter:
             if not all(col in lotto_data.columns for col in required_cols):
                 return None
             
-            # 데이터 준비
-            section_means = [
-                lotto_data['low_count'].mean(),
-                lotto_data['mid_count'].mean(), 
-                lotto_data['high_count'].mean()
-            ]
+            # NaN 값 처리 및 데이터 정제
+            clean_data = lotto_data.copy()
+            for col in required_cols:
+                # NaN 값을 0으로 대체하고 숫자형으로 변환
+                clean_data[col] = pd.to_numeric(clean_data[col], errors='coerce').fillna(0)
+            
+            # 데이터 준비 (NaN 체크 추가)
+            section_means = []
+            for col in required_cols:
+                col_data = clean_data[col].dropna()
+                if len(col_data) > 0:
+                    section_means.append(float(col_data.mean()))
+                else:
+                    section_means.append(0.0)
             
             section_names = ['저구간\n(1-15)', '중구간\n(16-30)', '고구간\n(31-45)']
+            
+            # 모든 값이 0이면 차트 생성 안함
+            if all(mean == 0 for mean in section_means):
+                print("구간별 데이터가 없어 차트 생성 건너뜀")
+                return None
             
             # 차트 생성
             fig, ax = plt.subplots(figsize=(10, 6))
             
             bars = ax.bar(section_names, section_means, 
-                         color=['lightblue', 'lightgreen', 'lightcoral'], alpha=0.7)
+                            color=['lightblue', 'lightgreen', 'lightcoral'], alpha=0.7)
             
             # 값 표시
             for bar, value in zip(bars, section_means):
-                ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.05,
-                       f'{value:.1f}', ha='center', va='bottom', fontweight='bold')
+                if value > 0:  # 0이 아닐 때만 표시
+                    ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.05,
+                            f'{value:.1f}', ha='center', va='bottom', fontweight='bold')
             
             ax.set_ylabel('평균 번호 개수')
             ax.set_title('구간별 평균 분포')
-            ax.set_ylim(0, max(section_means) * 1.2)
+            
+            # y축 범위 안전하게 설정
+            max_value = max(section_means) if section_means else 3
+            ax.set_ylim(0, max(max_value * 1.2, 3))
             
             # 이상적 분포선 (각 구간 2개씩)
             ax.axhline(y=2, color='red', linestyle='--', alpha=0.7, label='이상적 분포 (2개씩)')
