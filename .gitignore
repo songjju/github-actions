@@ -1,0 +1,9 @@
+# 로그 파일 무시
+logs
+
+# 데이터 파일 무시
+data/processed
+
+# 출력 파일 무시
+outputs
+
