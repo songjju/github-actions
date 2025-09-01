@@ -29,7 +29,7 @@ pytest>=7.0.0              # 테스트 프레임워크
 pytest-cov>=3.0.0          # 테스트 커버리지
 
 # === 취약점 개선 ===
-setuptools=75.1.0
+setuptools==75.1.0
 
 # === Python 버전 요구사항 ===
 # Python>=3.10
