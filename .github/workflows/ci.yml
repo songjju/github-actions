@@ -137,34 +137,33 @@ jobs:
           build-args: |
             BUILDKIT_INLINE_CACHE=1
 
-      - name: Image vulnerability scan
-        uses: aquasecurity/trivy-action@0.28.0  # 특정 버전 고정
+      - name: Comprehensive vulnerability scan
+        uses: aquasecurity/trivy-action@v0.28.0
         with:
           image-ref: ${{ env.IMAGE_NAME }}:${{ needs.build-and-test.outputs.version-tag }}
-          format: 'table'
-          exit-code: '1'  # 취약점 발견시 실패로 처리
-          severity: 'CRITICAL,HIGH,MEDIUM'  # 중요도별 필터링
-          timeout: '10m'  # 타임아웃 설정
-        continue-on-error: false  # 중요한 취약점이면 실패해야 함
-
-      - name: Run Trivy vulnerability scanner (SARIF)
-        uses: aquasecurity/trivy-action@0.28.0  # 특정 버전 고정
-        if: github.event_name == 'push'  # Only run on push, not PR
-        with:
-          image-ref: ${{ env.IMAGE_NAME }}:${{ needs.build-and-test.outputs.version-tag }}
-          format: 'sarif'
+          format: sarif
           output: 'trivy-results.sarif'
-          severity: 'CRITICAL,HIGH,MEDIUM'  # 일관된 심각도 수준
-          timeout: '10m'  # 타임아웃 설정
-        continue-on-error: true
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          timeout: '10m'
+        continue-on-error: false
 
-      - name: Upload Trivy scan results to Security tab
+      - name: Display scan results
+        if: always()
+        run: |
+          if [ -f trivy-results.sarif ]; then
+            echo "📊 Vulnerability scan completed"
+            # SARIF에서 주요 정보 추출하여 표시
+            jq -r '.runs[0].results[] | select(.level=="error") | .message.text' trivy-results.sarif | head -10
+          fi
+
+      - name: Upload Comprehensive scan results
         uses: github/codeql-action/upload-sarif@v3
-        if: github.event_name == 'push' && always() && hashFiles('trivy-results.sarif') != ''
+        if: always() && hashFiles('trivy-results.sarif') != ''
         with:
           sarif_file: 'trivy-results.sarif'
-          category: 'trivy'  # 카테고리 명시적 설정
-        continue-on-error: true  # Don't fail if upload fails
+          category: 'trivy'
+        continue-on-error: true
 
       - name: Upload Trivy results as artifact
         uses: actions/upload-artifact@v4
