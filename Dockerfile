@@ -3,7 +3,7 @@ FROM python:3.11-slim AS builder
 
 # 🔥 핵심: setuptools 먼저 업그레이드 (취약점 해결)
 RUN pip install --upgrade pip && \
-    pip install --force-reinstall --no-cache-dir "setuptools>=70.0.0" "wheel>=0.42.0"
+    pip install --force-reinstall --no-cache-dir "setuptools>=78.1.1" "wheel>=0.42.0"
 
 # 빌드 의존성 설치
 RUN apt-get update && apt-get install -y \
@@ -35,7 +35,7 @@ FROM python:3.11-slim AS runtime
 
 # 🔥 핵심: Runtime에서도 setuptools 업그레이드
 RUN pip install --upgrade pip && \
-    pip install --force-reinstall --no-cache-dir "setuptools>=78.1.1" "wheel>=0.42.0"
+    pip install --force-reinstall --no-cache-dir "setuptools>=78.1.1"
 
 # 런타임 의존성 설치 (빌드 도구는 제외)
 RUN apt-get update && apt-get install -y \
