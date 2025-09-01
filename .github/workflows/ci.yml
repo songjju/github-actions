@@ -138,7 +138,7 @@ jobs:
             BUILDKIT_INLINE_CACHE=1
 
       - name: Comprehensive vulnerability scan
-        uses: aquasecurity/trivy-action@v0.28.0
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: ${{ env.IMAGE_NAME }}:${{ needs.build-and-test.outputs.version-tag }}
           format: sarif
