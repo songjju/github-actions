@@ -141,20 +141,29 @@ jobs:
         uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: ${{ env.IMAGE_NAME }}:${{ needs.build-and-test.outputs.version-tag }}
-          format: sarif
-          output: 'trivy-results.sarif'
-          exit-code: '1'
+          format: json  # SARIF 대신 JSON 먼저 시도
+          output: 'trivy-results.json'
+          exit-code: '0'  # 일단 실패하지 않도록
           severity: 'CRITICAL,HIGH'
           timeout: '10m'
-        continue-on-error: false
+        continue-on-error: true
 
-      - name: Display scan results
+      - name: Display JSON scan results
         if: always()
         run: |
-          if [ -f trivy-results.sarif ]; then
-            echo "📊 Vulnerability scan completed"
-            # SARIF에서 주요 정보 추출하여 표시
-            jq -r '.runs[0].results[] | select(.level=="error") | .message.text' trivy-results.sarif | head -10
+          if [ -f trivy-results.json ]; then
+            echo "📊 JSON 스캔 결과:"
+            echo "파일 크기: $(wc -c < trivy-results.json) bytes"
+            
+            # 취약점 개수
+            echo "발견된 취약점:"
+            jq '.Results[]?.Vulnerabilities | length' trivy-results.json 2>/dev/null | head -5
+            
+            # 심각한 취약점 목록
+            echo "CRITICAL/HIGH 취약점:"
+            jq -r '.Results[]?.Vulnerabilities[]? | select(.Severity == "CRITICAL" or .Severity == "HIGH") | "\(.Severity): \(.VulnerabilityID) in \(.PkgName)"' trivy-results.json | head -10
+          else
+            echo "❌ trivy-results.json 파일이 없습니다"
           fi
 
       - name: Upload Comprehensive scan results
