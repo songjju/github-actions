@@ -148,22 +148,36 @@ jobs:
           timeout: '10m'
         continue-on-error: true
 
-      - name: Display JSON scan results
+      - name: Display scan results
         if: always()
         run: |
           if [ -f trivy-results.json ]; then
-            echo "📊 JSON 스캔 결과:"
-            echo "파일 크기: $(wc -c < trivy-results.json) bytes"
+            echo "📊 Trivy 스캔 완료"
             
-            # 취약점 개수
-            echo "발견된 취약점:"
-            jq '.Results[]?.Vulnerabilities | length' trivy-results.json 2>/dev/null | head -5
+            # 기본 정보
+            echo "스캔 대상: $(jq -r '.ArtifactName' trivy-results.json)"
+            echo "스캔 시간: $(jq -r '.CreatedAt' trivy-results.json)"
             
-            # 심각한 취약점 목록
-            echo "CRITICAL/HIGH 취약점:"
-            jq -r '.Results[]?.Vulnerabilities[]? | select(.Severity == "CRITICAL" or .Severity == "HIGH") | "\(.Severity): \(.VulnerabilityID) in \(.PkgName)"' trivy-results.json | head -10
+            # 취약점 개수 확인
+            total_vulns=0
+            for target in $(jq -r '.Results[]?.Target // "unknown"' trivy-results.json); do
+              echo "📋 대상: $target"
+              vulns=$(jq -r ".Results[] | select(.Target == \"$target\") | .Vulnerabilities // [] | length" trivy-results.json 2>/dev/null || echo "0")
+              echo "   취약점: ${vulns}개"
+              total_vulns=$((total_vulns + vulns))
+            done
+            
+            echo "🎯 총 취약점: ${total_vulns}개"
+            
+            if [ "$total_vulns" -eq 0 ]; then
+              echo "✅ 축하합니다! CRITICAL/HIGH 심각도 취약점이 발견되지 않았습니다."
+              echo "🛡️  Docker 이미지가 보안 요구사항을 충족합니다."
+            else
+              echo "⚠️  발견된 취약점 상세:"
+              jq -r '.Results[]?.Vulnerabilities[]? | "\(.Severity): \(.VulnerabilityID) in \(.PkgName)"' trivy-results.json
+            fi
           else
-            echo "❌ trivy-results.json 파일이 없습니다"
+            echo "❌ trivy-results.json 파일을 찾을 수 없습니다"
           fi
       
       - name: Upload Trivy results as artifact
