@@ -168,9 +168,9 @@ jobs:
 
       - name: Upload Comprehensive scan results
         uses: github/codeql-action/upload-sarif@v3
-        if: always() && hashFiles('trivy-results.sarif') != ''
+        if: always() && hashFiles('trivy-results.json') != ''
         with:
-          sarif_file: 'trivy-results.sarif'
+          sarif_file: 'trivy-results.json'
           category: 'trivy'
         continue-on-error: true
 
@@ -179,7 +179,7 @@ jobs:
         if: always()
         with:
           name: trivy-security-scan-${{ needs.build-and-test.outputs.version-tag }}
-          path: trivy-results.sarif
+          path: trivy-results.json
           retention-days: 5
   
   deploy:
