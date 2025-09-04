@@ -91,7 +91,7 @@ class LottoDataValidator:
     
     def __init__(self):
         self.logger = self._setup_logger()
-        self.required_columns = ['num1', 'num2', 'num3', 'num4', 'num5', 'num6']
+        self.required_columns = ['number_1', 'number_2', 'number_3', 'number_4', 'number_5', 'number_6']
         self.optional_columns = ['bonus', 'round', 'draw_date']
         self.number_range = (1, 45)
         

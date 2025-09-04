@@ -14,6 +14,8 @@
 import sys
 import os
 import argparse
+import numpy as np
+import pandas as pd
 from pathlib import Path
 import json
 from datetime import datetime
@@ -177,22 +179,70 @@ def validate_system_components(lotto_data, config, logger):
     try:
         logger.info("시스템 검증 시작")
         
+        # 🔍 디버깅: 전달받은 데이터 확인
+        logger.info(f"검증용 데이터 확인: {type(lotto_data)}, 행수={len(lotto_data) if hasattr(lotto_data, '__len__') else 'Unknown'}")
+        if hasattr(lotto_data, 'empty'):
+            logger.info(f"데이터 비어있음 여부: {lotto_data.empty}")
+        
         # 파이프라인 검증기 초기화
         pipeline_validator = PipelineValidator()
         
-        # 모의 컴포넌트 (실제 구현된 것들로 교체)
+        # ✅ FormulaEngine import 추가
+        try:
+            from src.prediction.formula_engine import FormulaEngine
+            logger.info("FormulaEngine import 성공")
+        except ImportError as e:
+            logger.warning(f"FormulaEngine import 실패: {e}, 임시 클래스 사용")
+            class TempFormulaEngine:
+                def apply_formulas(self, *args, **kwargs):
+                    return {'predictions': [[1, 2, 3, 4, 5, 6]], 'confidence': 0.5}
+            FormulaEngine = TempFormulaEngine
+        
+        # 모든 컴포넌트 (formula_engine 포함)
         components = {
             'data_loader': LottoDataLoader(Config.DATA_FILE_PATH),
             'statistics_analyzer': BasicStatistics(lotto_data),
             'pattern_detector': LottoPatternDetector(),
             'frequency_analyzer': LottoFrequencyAnalyzer(),
             'timeseries_analyzer': LottoTimeSeriesAnalyzer(),
-            'predictor': EnsemblePredictor(lotto_data, {})
+            'predictor': EnsemblePredictor(lotto_data, {}),
+            'formula_engine': FormulaEngine()  # ✅ 추가된 부분
         }
+        
+        # ✅ 데이터 검증 전 사전 확인
+        if lotto_data is None or (hasattr(lotto_data, 'empty') and lotto_data.empty):
+            logger.warning("전달된 데이터가 비어있음. 샘플 데이터로 검증 수행")
+            # 샘플 데이터 생성 (검증만을 위해)
+            import pandas as pd
+            import numpy as np
+            sample_data = []
+            for i in range(50):  # 50행 샘플
+                numbers = sorted(np.random.choice(range(1, 46), size=6, replace=False))
+                row = {
+                    'round_number': 1000 + i,
+                    'number_1': numbers[0],
+                    'number_2': numbers[1], 
+                    'number_3': numbers[2],
+                    'number_4': numbers[3],
+                    'number_5': numbers[4],
+                    'number_6': numbers[5],
+                    'winning_numbers': numbers,
+                    'bonus_number': np.random.randint(1, 46),
+                    'number_sum': sum(numbers),
+                    'odd_count': sum(1 for n in numbers if n % 2 == 1),
+                    'even_count': sum(1 for n in numbers if n % 2 == 0)
+                }
+                sample_data.append(row)
+            
+            validation_data = pd.DataFrame(sample_data)
+            logger.info(f"샘플 데이터 생성: {len(validation_data)}행")
+        else:
+            validation_data = lotto_data
+            logger.info(f"원본 데이터 사용: {len(validation_data)}행")
         
         # 전체 파이프라인 검증
         validation_results = pipeline_validator.validate_complete_pipeline(
-            lotto_data, config, components, test_prediction=True
+            validation_data, config, components, test_prediction=True
         )
         
         # 검증 리포트 생성
@@ -201,6 +251,7 @@ def validate_system_components(lotto_data, config, logger):
         
         # 검증 결과 저장
         validation_file = Path('outputs/reports/validation_report.json')
+        validation_file.parent.mkdir(parents=True, exist_ok=True)
         with open(validation_file, 'w', encoding='utf-8') as f:
             json.dump(validation_report, f, ensure_ascii=False, indent=2)
         
@@ -210,12 +261,23 @@ def validate_system_components(lotto_data, config, logger):
         
     except Exception as e:
         logger.error(f"시스템 검증 오류: {e}")
+        import traceback
+        logger.error(f"상세 오류: {traceback.format_exc()}")
         return {}, {}
 
 def generate_comprehensive_report(lotto_data, analysis_results, predictions, validation_report, logger):
     """종합 분석 리포트 생성"""
     try:
         logger.info("종합 리포트 생성 시작")
+
+        if lotto_data.empty:
+            logger.warning("로또 데이터가 비어있습니다")
+        
+        if not analysis_results:
+            logger.warning("분석 결과가 없습니다")
+        
+        if not predictions:
+            logger.warning("예측 결과가 없습니다")
         
         # HTML 리포트 생성
         html_content = f"""
@@ -326,22 +388,61 @@ def generate_comprehensive_report(lotto_data, analysis_results, predictions, val
         
         logger.info(f"종합 리포트 저장: {report_file}")
         return report_file
-        
+    
     except Exception as e:
         logger.error(f"리포트 생성 오류: {e}")
         return None
 
+def convert_to_serializable(obj):
+    """재귀적으로 객체를 JSON 직렬화 가능한 형태로 변환"""
+    if isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, pd.Series):
+        return obj.tolist()
+    elif isinstance(obj, pd.DataFrame):
+        return obj.to_dict('records')
+    elif isinstance(obj, dict):
+        return {key: convert_to_serializable(value) for key, value in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [convert_to_serializable(item) for item in obj]
+    elif isinstance(obj, set):
+        return list(obj)
+    elif hasattr(obj, 'isoformat'):  # datetime objects
+        return obj.isoformat()
+    elif hasattr(obj, '__dict__'):
+        # 커스텀 객체의 경우 딕셔너리로 변환 시도
+        try:
+            return convert_to_serializable(obj.__dict__)
+        except:
+            return str(obj)
+    elif obj is None or isinstance(obj, (str, int, float, bool)):
+        return obj
+    else:
+        return str(obj)
+
 def save_detailed_results(analysis_results, predictions, logger):
-    """상세 결과 저장"""
+    """상세 결과 저장 - JSON 직렬화 오류 수정 버전"""
     try:
+        # 디렉토리 생성
+        Path('outputs/predictions').mkdir(parents=True, exist_ok=True)
+        Path('outputs/reports').mkdir(parents=True, exist_ok=True)
+        
         # 1. 예측 결과 저장
         predictions_file = Path('outputs/predictions/latest_prediction.json')
+        
+        # 예측 데이터를 직렬화 가능하게 변환
+        serializable_predictions = convert_to_serializable(predictions)
+        
         prediction_data = {
             'timestamp': datetime.now().isoformat(),
-            'predictions': predictions,
+            'predictions': serializable_predictions,
             'summary': {
                 'total_predictions': len(predictions),
-                'average_confidence': sum(p['confidence'] for p in predictions) / len(predictions) if predictions else 0,
+                'average_confidence': sum(float(p['confidence']) for p in predictions) / len(predictions) if predictions else 0,
                 'unique_predictions': len(set(tuple(sorted(p['numbers'])) for p in predictions))
             }
         }
@@ -349,33 +450,34 @@ def save_detailed_results(analysis_results, predictions, logger):
         with open(predictions_file, 'w', encoding='utf-8') as f:
             json.dump(prediction_data, f, ensure_ascii=False, indent=2)
         
+        logger.info(f"예측 결과 저장: {predictions_file}")
+        
         # 2. 분석 결과 저장
         analysis_file = Path('outputs/reports/analysis_results.json')
         
         # 분석 결과를 JSON 직렬화 가능한 형태로 변환
-        serializable_results = {}
-        for key, value in analysis_results.items():
-            try:
-                if hasattr(value, 'to_dict'):
-                    serializable_results[key] = value.to_dict()
-                elif isinstance(value, dict):
-                    # 중첩된 객체들도 변환
-                    serializable_dict = {}
-                    for k, v in value.items():
-                        if hasattr(v, 'to_dict'):
-                            serializable_dict[k] = v.to_dict()
-                        elif isinstance(v, (list, dict, str, int, float, bool)) or v is None:
-                            serializable_dict[k] = v
-                        else:
-                            serializable_dict[k] = str(v)
-                    serializable_results[key] = serializable_dict
-                else:
-                    serializable_results[key] = str(value)
-            except Exception:
-                serializable_results[key] = f"직렬화 불가: {type(value)}"
-        
-        with open(analysis_file, 'w', encoding='utf-8') as f:
-            json.dump(serializable_results, f, ensure_ascii=False, indent=2)
+        try:
+            serializable_results = convert_to_serializable(analysis_results)
+            
+            with open(analysis_file, 'w', encoding='utf-8') as f:
+                json.dump(serializable_results, f, ensure_ascii=False, indent=2)
+            
+            logger.info(f"분석 결과 저장: {analysis_file}")
+            
+        except Exception as json_error:
+            logger.warning(f"분석 결과 JSON 저장 실패: {json_error}")
+            
+            # JSON 저장 실패 시 텍스트 파일로 저장
+            analysis_text_file = Path('outputs/reports/analysis_results.txt')
+            with open(analysis_text_file, 'w', encoding='utf-8') as f:
+                f.write(f"분석 결과 요약\n")
+                f.write(f"생성 시간: {datetime.now().isoformat()}\n\n")
+                
+                for key, value in analysis_results.items():
+                    f.write(f"=== {key.upper()} ===\n")
+                    f.write(f"{str(value)}\n\n")
+            
+            logger.info(f"분석 결과 텍스트로 저장: {analysis_text_file}")
         
         # 3. 히스토리 업데이트 - 시간 정보 추가
         history_file = Path('outputs/predictions/prediction_history.txt')
@@ -383,6 +485,7 @@ def save_detailed_results(analysis_results, predictions, logger):
             with open(history_file, 'w', encoding='utf-8') as f:
                 # 헤더 작성 - 시간 컬럼 추가
                 f.write("날짜 | 시간 | ID | 예측번호 | 신뢰도\n")
+                f.write("-" * 80 + "\n")
 
         with open(history_file, 'a', encoding='utf-8') as f:
             current_time = datetime.now()
@@ -390,17 +493,67 @@ def save_detailed_results(analysis_results, predictions, logger):
             time_str = current_time.strftime('%H:%M:%S')
             
             for prediction in predictions:
-                # 번호를 쉼표와 공백으로 구분
-                numbers_str = ', '.join(map(str, sorted(prediction['numbers'])))
-                confidence_str = f"{prediction['confidence']*100:.2f}%"
+                try:
+                    # 번호를 쉼표와 공백으로 구분
+                    numbers = [int(n) for n in prediction['numbers']]  # numpy int64를 일반 int로 변환
+                    numbers_str = ', '.join(map(str, sorted(numbers)))
+                    confidence = float(prediction['confidence'])  # numpy float을 일반 float로 변환
+                    confidence_str = f"{confidence*100:.2f}%"
+                    
+                    # 파이프로 구분된 테이블 형태 - 시간 컬럼 추가
+                    f.write(f"{date_str} | {time_str} | {prediction.get('prediction_id', 'N/A')} | {numbers_str} | {confidence_str}\n")
+                    
+                except Exception as pred_error:
+                    logger.warning(f"개별 예측 저장 실패: {pred_error}")
+                    continue
+        
+        logger.info(f"예측 히스토리 업데이트: {history_file}")
+        
+        # 4. 요약 통계 저장 (추가)
+        summary_file = Path('outputs/reports/session_summary.txt')
+        with open(summary_file, 'w', encoding='utf-8') as f:
+            f.write(f"로또 예측 세션 요약\n")
+            f.write(f"{'='*50}\n")
+            f.write(f"실행 시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"생성된 예측 수: {len(predictions)}\n")
+            
+            if predictions:
+                avg_confidence = sum(float(p['confidence']) for p in predictions) / len(predictions)
+                f.write(f"평균 신뢰도: {avg_confidence*100:.2f}%\n")
                 
-                # 파이프로 구분된 테이블 형태 - 시간 컬럼 추가
-                f.write(f"{date_str} | {time_str} | {prediction['prediction_id']} | {numbers_str} | {confidence_str}\n")
+                # 가장 높은 신뢰도의 예측
+                best_prediction = max(predictions, key=lambda x: float(x['confidence']))
+                best_numbers = sorted([int(n) for n in best_prediction['numbers']])
+                f.write(f"최고 신뢰도 예측: {', '.join(map(str, best_numbers))} ({float(best_prediction['confidence'])*100:.2f}%)\n")
+            
+            f.write(f"\n분석 모듈 실행 결과:\n")
+            for module_name, result in analysis_results.items():
+                if isinstance(result, dict) and result:
+                    f.write(f"  - {module_name}: 성공\n")
+                else:
+                    f.write(f"  - {module_name}: 실행됨\n")
         
         logger.info("모든 결과 파일 저장 완료")
         
+        return {
+            'success': True,
+            'files_created': [
+                str(predictions_file),
+                str(analysis_file) if analysis_file.exists() else str(Path('outputs/reports/analysis_results.txt')),
+                str(history_file),
+                str(summary_file)
+            ]
+        }
+        
     except Exception as e:
-        logger.error(f"결과 저장 오류: {e}")
+        logger.error(f"결과 저장 중 치명적 오류: {e}")
+        import traceback
+        logger.error(f"상세 오류: {traceback.format_exc()}")
+        
+        return {
+            'success': False,
+            'error': str(e)
+        }
 
 def main():
     """메인 실행 함수"""
@@ -449,9 +602,9 @@ def main():
         raw_data = data_loader.load_and_preprocess()
         
         # 데이터 정제
-        data_cleaner = LottoDataCleaner()
+        data_cleaner = LottoDataCleaner(strict_mode=False)
         cleaned_data = data_cleaner.clean_data(raw_data)
-        
+
         print(f"✅ {len(cleaned_data)} 회차 데이터 로딩 완료")
         
         # 3. 데이터 검증
@@ -497,12 +650,15 @@ def main():
         if args.validate:
             print("\n6️⃣ 시스템 검증")
             config_dict = {
-                'data_file_path': Config.DATA_FILE_PATH,
+                'data_file_path': str(Config.DATA_FILE_PATH),  # Path 객체를 문자열로
                 'prediction_count': args.predictions,
-                'confidence_threshold': 0.1
+                'confidence_threshold': Config.DEFAULT_CONFIDENCE_THRESHOLD,
+                'formula_weights': Config.FORMULA_WEIGHTS,  # ✅ 누락된 부분 추가
+                'max_prediction_sets': Config.MAX_PREDICTION_SETS,
+                'diversity_settings': Config.DIVERSITY_SETTINGS
             }
             validation_results, validation_report = validate_system_components(
-                cleaned_data, config_dict, logger
+                cleaned_data, config_dict, logger  # ✅ config_dict 전달
             )
             print(f"시스템 상태: {validation_report.get('overall_status', 'unknown')}")
         

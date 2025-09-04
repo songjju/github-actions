@@ -30,7 +30,7 @@ class Config:
     DATA_FILE_PATH = RAW_DATA_DIR / 'lotto_results.csv'
     PROCESSED_DATA_PATH = PROCESSED_DATA_DIR / 'cleaned_data.csv'
     STATISTICS_PATH = PROCESSED_DATA_DIR / 'statistical_features.csv'
-    
+
     # === 로그 설정 ===
     LOG_LEVEL = 'INFO'
     LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -54,18 +54,31 @@ class Config:
     
     # === 천재적 공식 가중치 ===
     FORMULA_WEIGHTS = {
-        'genius_insight': 1.0,
-        'multi_dimensional': 0.8,
-        'creative_connection': 0.7,
-        'problem_redefinition': 0.6,
-        'innovative_solution': 0.5,
-        'insight_amplification': 0.4,
-        'thinking_evolution': 0.3,
-        'complexity_solution': 0.2,
-        'intuitive_leap': 0.4,
-        'integrated_wisdom': 1.0
+        'genius_insight': 0.20,          # 주 공식 (구현됨)
+        'multi_dimensional': 0.15,       # 다차원 분석
+        'creative_connection': 0.12,     # 창의적 연결
+        'problem_redefinition': 0.10,    # 문제 재정의
+        'innovative_solution': 0.08,     # 혁신적 솔루션
+        'insight_amplification': 0.07,   # 통찰 증폭
+        'thinking_evolution': 0.06,      # 사고 진화
+        'complexity_solution': 0.05,     # 복잡성 솔루션
+        'intuitive_leap': 0.07,          # 직관적 도약
+        'integrated_wisdom': 0.10        # 통합 지혜
     }
     
+    FORMULA_WEIGHTS_ALT = {
+        'genius_insight': 0.25,          # 주 공식 비중 높임
+        'integrated_wisdom': 0.20,       # 통합 지혜
+        'multi_dimensional': 0.15,       
+        'creative_connection': 0.12,     
+        'problem_redefinition': 0.10,    
+        'innovative_solution': 0.08,     
+        'insight_amplification': 0.05,   
+        'thinking_evolution': 0.03,      
+        'complexity_solution': 0.02,     
+        'intuitive_leap': 0.00           # 비활성화
+    }
+
     # === 분석 파라미터 ===
     ANALYSIS_PARAMS = {
         'frequency_window': 52,           # 빈도 분석 기간 (주 단위)

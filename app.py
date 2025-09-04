@@ -6,7 +6,7 @@ Flask 로또 예측 웹 애플리케이션
 - 기능 2: 이전 예측 기록 조회
 """
 
-from flask import Flask, render_template, jsonify, request, redirect, url_for
+from flask import Flask, render_template, jsonify, request, redirect, url_for, send_file, send_from_directory
 import subprocess
 import sys
 import os
@@ -15,6 +15,9 @@ import pandas as pd
 from datetime import datetime
 from pathlib import Path
 import re
+import zipfile
+import tempfile
+import glob
 
 # Flask 앱 초기화
 app = Flask(__name__)
@@ -25,6 +28,11 @@ MAIN_SCRIPT_PATH = 'main.py'  # 기존 main.py 경로
 PREDICTIONS_HISTORY_PATH = 'outputs/predictions/prediction_history.txt'
 PREDICTIONS_JSON_PATH = 'outputs/predictions/latest_predictions.json'
 CSV_DATA_PATH = 'data/raw/lotto_results.csv'
+
+DEBUG_MODE = os.getenv('LOTTO_DEBUG', 'false').lower() == 'true'
+SHOW_SENSITIVE_INFO = os.getenv('LOTTO_SHOW_SENSITIVE', 'false').lower() == 'true'
+
+VISUALIZATIONS_DIR = 'outputs/visualizations'
 
 class FlaskLottoWrapper:
     """기존 main.py 시스템을 Flask로 감싸는 래퍼 클래스"""
@@ -499,19 +507,163 @@ def statistics():
                              stats=default_stats, 
                              stats_json=stats_json)
 
-@app.route('/system-check')
-def system_check():
-    """시스템 상태 확인 페이지"""
-    status = {
+def get_filtered_python_version():
+    """Python 버전 정보 필터링"""
+    version_info = sys.version_info
+    return f"Python {version_info.major}.{version_info.minor}.x"
+
+def get_prediction_count():
+    """예측 기록 개수 반환"""
+    try:
+        if os.path.exists(PREDICTIONS_HISTORY_PATH):
+            with open(PREDICTIONS_HISTORY_PATH, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+                return max(0, len(lines) - 1)  # 헤더 제외
+        return 0
+    except:
+        return 0
+
+def get_basic_status():
+    """기본적인 시스템 정보만 반환 (프로덕션용)"""
+    return {
         'main_py_exists': os.path.exists(MAIN_SCRIPT_PATH),
         'csv_data_exists': os.path.exists(CSV_DATA_PATH),
         'output_dir_exists': os.path.exists('outputs'),
-        'python_version': sys.version,
-        'current_dir': os.getcwd(),
-        'files_in_dir': os.listdir('.') if os.path.exists('.') else []
+        'predictions_dir_exists': os.path.exists('outputs/predictions'),
+        'reports_dir_exists': os.path.exists('outputs/reports'),
+        'logs_dir_exists': os.path.exists('logs'),
+        'python_version': get_filtered_python_version(),
+        'app_status': 'running',
+        'total_predictions': get_prediction_count(),
+        'environment': 'production' if not DEBUG_MODE else 'development',
+        'last_check': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     }
+
+def get_detailed_status():
+    """상세한 시스템 정보 반환 (개발용)"""
+    basic_status = get_basic_status()
     
-    return render_template('system_check.html', status=status)
+    # 개발 환경에서만 추가 정보 제공
+    if DEBUG_MODE and SHOW_SENSITIVE_INFO:
+        detailed_info = {
+            'current_dir': os.getcwd(),
+            'python_full_version': sys.version,
+            'file_count': len(os.listdir('.')) if os.path.exists('.') else 0,
+            'key_files': get_key_files_status(),
+            'directory_structure': get_safe_directory_structure()
+        }
+        basic_status.update(detailed_info)
+    
+    return basic_status
+
+def get_key_files_status():
+    """주요 파일들의 상태만 확인"""
+    key_files = [
+        'main.py',
+        'app.py', 
+        'requirements.txt',
+        'data/raw/lotto_results.csv',
+        'src/prediction/ensemble_predictor.py',
+        'src/utils/validator.py'
+    ]
+    
+    status = {}
+    for file_path in key_files:
+        status[file_path] = {
+            'exists': os.path.exists(file_path),
+            'size': get_safe_file_size(file_path)
+        }
+    
+    return status
+
+def get_safe_file_size(file_path):
+    """안전한 파일 크기 정보"""
+    try:
+        if os.path.exists(file_path):
+            size = os.path.getsize(file_path)
+            if size < 1024:
+                return f"{size}B"
+            elif size < 1024*1024:
+                return f"{size//1024}KB"
+            else:
+                return f"{size//(1024*1024)}MB"
+        return "N/A"
+    except:
+        return "Error"
+
+def get_safe_directory_structure():
+    """안전한 디렉토리 구조 정보"""
+    important_dirs = [
+        'src/',
+        'data/',
+        'outputs/',
+        'logs/',
+        'templates/',
+        'static/'
+    ]
+    
+    structure = {}
+    for dir_path in important_dirs:
+        if os.path.exists(dir_path):
+            try:
+                file_count = len([f for f in os.listdir(dir_path) 
+                                if os.path.isfile(os.path.join(dir_path, f))])
+                subdir_count = len([d for d in os.listdir(dir_path) 
+                                  if os.path.isdir(os.path.join(dir_path, d))])
+                structure[dir_path] = {
+                    'files': file_count,
+                    'subdirs': subdir_count
+                }
+            except:
+                structure[dir_path] = {'files': 'Error', 'subdirs': 'Error'}
+        else:
+            structure[dir_path] = {'exists': False}
+    
+    return structure
+
+@app.route('/system-check')
+def system_check():
+    """보안 강화된 시스템 상태 확인 페이지"""
+    try:
+        if DEBUG_MODE:
+            print(f"[DEBUG] System check accessed in debug mode")
+            print(f"[DEBUG] SHOW_SENSITIVE_INFO: {SHOW_SENSITIVE_INFO}")
+        
+        # 환경에 따른 정보 제공
+        if DEBUG_MODE:
+            status = get_detailed_status()
+        else:
+            status = get_basic_status()
+        
+        # 추가 보안 정보
+        security_info = {
+            'debug_mode': DEBUG_MODE,
+            'sensitive_info_enabled': SHOW_SENSITIVE_INFO,
+            'access_level': 'admin' if (DEBUG_MODE and SHOW_SENSITIVE_INFO) else 'basic'
+        }
+        
+        return render_template('system_check.html', 
+                             status=status, 
+                             security=security_info)
+        
+    except Exception as e:
+        print(f"System check error: {e}")
+        # 오류 시 최소한의 정보만 제공
+        minimal_status = {
+            'app_status': 'error',
+            'error_message': 'System check failed',
+            'environment': 'unknown',
+            'last_check': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        security_info = {
+            'debug_mode': False,
+            'sensitive_info_enabled': False,
+            'access_level': 'minimal'
+        }
+        
+        return render_template('system_check.html', 
+                             status=minimal_status, 
+                             security=security_info)
 
 @app.route('/run-analysis', methods=['POST'])
 def run_analysis():

@@ -1,9 +1,9 @@
 """
 파일명: src/analysis/basic_statistics.py
-목적: 로또 데이터의 기초 통계 분석 수행
+목적: 로또 데이터의 기초 통계 분석 수행 (오류 수정 버전)
 작성자: AI Assistant
 작성일: 2025-08-30
-버전: 1.0
+버전: 1.1
 
 주요 클래스/함수:
 - BasicStatistics: 기초 통계 분석 클래스
@@ -90,16 +90,59 @@ class BasicStatistics:
             raise
     
     def _get_basic_info(self) -> Dict[str, Any]:
-        """기본 정보 수집"""
-        return {
-            'total_draws': len(self.data),
-            'total_numbers_drawn': len(self.data) * 6,
-            'latest_round': self.data['round_number'].max() if not self.data.empty else None,
-            'oldest_round': self.data['round_number'].min() if not self.data.empty else None,
-            'data_completeness': self._check_data_completeness(),
-            'unique_combinations': len(set(tuple(row['winning_numbers']) for _, row in self.data.iterrows())),
-            'duplicate_combinations': len(self.data) - len(set(tuple(row['winning_numbers']) for _, row in self.data.iterrows()))
-        }
+        """기본 정보 수집 - 안전한 winning_numbers 처리"""
+        try:
+            # winning_numbers 컬럼 처리
+            unique_combinations = 0
+            if 'winning_numbers' in self.data.columns:
+                valid_combinations = []
+                for _, row in self.data.iterrows():
+                    winning_nums = row['winning_numbers']
+                    
+                    # 데이터 타입에 따른 처리
+                    if isinstance(winning_nums, (list, tuple, np.ndarray)):
+                        valid_combinations.append(tuple(winning_nums))
+                    elif isinstance(winning_nums, str):
+                        try:
+                            # 문자열인 경우 파싱 시도
+                            nums = [int(x.strip()) for x in winning_nums.strip('[]').split(',')]
+                            if len(nums) == 6:
+                                valid_combinations.append(tuple(nums))
+                        except:
+                            continue
+                    elif isinstance(winning_nums, int):
+                        # 개별 번호들로부터 조합 생성
+                        nums = [
+                            row.get('number_1', 0), row.get('number_2', 0),
+                            row.get('number_3', 0), row.get('number_4', 0),
+                            row.get('number_5', 0), row.get('number_6', 0)
+                        ]
+                        if all(isinstance(n, int) and 1 <= n <= 45 for n in nums):
+                            valid_combinations.append(tuple(sorted(nums)))
+                    
+                unique_combinations = len(set(valid_combinations))
+            
+            return {
+                'total_draws': len(self.data),
+                'total_numbers_drawn': len(self.data) * 6,
+                'latest_round': self.data['round_number'].max() if 'round_number' in self.data.columns and not self.data.empty else None,
+                'oldest_round': self.data['round_number'].min() if 'round_number' in self.data.columns and not self.data.empty else None,
+                'data_completeness': self._check_data_completeness(),
+                'unique_combinations': unique_combinations,
+                'duplicate_combinations': len(self.data) - unique_combinations if unique_combinations > 0 else 0
+            }
+        except Exception as e:
+            self.logger.warning(f"기본 정보 수집 중 오류: {e}")
+            # 오류 발생 시 기본값 반환
+            return {
+                'total_draws': len(self.data),
+                'total_numbers_drawn': len(self.data) * 6,
+                'latest_round': None,
+                'oldest_round': None,
+                'data_completeness': {'missing_rounds_count': 0, 'completeness_ratio': 1.0},
+                'unique_combinations': 0,
+                'duplicate_combinations': 0
+            }
     
     def _check_data_completeness(self) -> Dict[str, Any]:
         """데이터 완성도 체크"""
@@ -193,27 +236,45 @@ class BasicStatistics:
         }
     
     def _analyze_trends(self) -> Dict[str, Any]:
-        """트렌드 분석"""
+        """트렌드 분석 - 안전한 winning_numbers 처리"""
         # 최근 트렌드 (최근 52주, 26주, 13주)
         trends = {}
         
-        for weeks in AnalysisConstants.TIME_WINDOWS.values():
+        # AnalysisConstants.TIME_WINDOWS가 없는 경우 기본값 사용
+        time_windows = getattr(AnalysisConstants, 'TIME_WINDOWS', {
+            'quarterly': 13,
+            'semi_annual': 26,
+            'annual': 52
+        })
+        
+        for period_name, weeks in time_windows.items():
             if len(self.data) >= weeks:
                 recent_data = self.data.head(weeks)
                 
-                # 최근 기간의 번호별 빈도
+                # 최근 기간의 번호별 빈도 - 안전한 처리
                 all_numbers = []
                 for _, row in recent_data.iterrows():
-                    all_numbers.extend(row['winning_numbers'])
+                    winning_nums = row['winning_numbers']
+                    numbers = self._extract_numbers_safely(row, winning_nums)
+                    if numbers:
+                        all_numbers.extend(numbers)
                 
-                number_freq = Counter(all_numbers)
-                
-                trends[f'last_{weeks}_draws'] = {
-                    'most_frequent': number_freq.most_common(10),
-                    'least_frequent': number_freq.most_common()[-10:] if len(number_freq.most_common()) >= 10 else [],
-                    'avg_sum': recent_data['number_sum'].mean(),
-                    'avg_odd_count': recent_data['odd_count'].mean()
-                }
+                if all_numbers:
+                    number_freq = Counter(all_numbers)
+                    
+                    trends[f'last_{weeks}_draws'] = {
+                        'most_frequent': number_freq.most_common(10),
+                        'least_frequent': number_freq.most_common()[-10:] if len(number_freq.most_common()) >= 10 else [],
+                        'avg_sum': recent_data['number_sum'].mean() if 'number_sum' in recent_data.columns else sum(all_numbers) / len(recent_data),
+                        'avg_odd_count': recent_data['odd_count'].mean() if 'odd_count' in recent_data.columns else sum(1 for n in all_numbers if n % 2 == 1) / len(recent_data)
+                    }
+                else:
+                    trends[f'last_{weeks}_draws'] = {
+                        'most_frequent': [],
+                        'least_frequent': [],
+                        'avg_sum': 0,
+                        'avg_odd_count': 3
+                    }
         
         return trends
     
@@ -229,27 +290,61 @@ class BasicStatistics:
             corr_matrix = self.data[available_columns].corr()
             correlations['numeric_correlations'] = corr_matrix.to_dict()
         
-        # 번호 간 동시 출현 분석
+        # 번호 간 동시 출현 분석 (수정된 메서드 호출)
         cooccurrence = self._analyze_number_cooccurrence()
         correlations['number_cooccurrence'] = cooccurrence
         
         return correlations
     
     def _analyze_number_cooccurrence(self) -> Dict[str, Any]:
-        """번호 간 동시 출현 분석"""
+        """번호 간 동시 출현 분석 - 강화된 안전 처리"""
         cooccurrence_count = defaultdict(int)
         total_combinations = 0
         
-        for _, row in self.data.iterrows():
-            numbers = row['winning_numbers']
+        for idx, row in self.data.iterrows():
+            winning_nums = row['winning_numbers']
+            numbers = self._extract_numbers_safely(row, winning_nums)
+            
+            # 디버깅을 위한 타입 체크
+            if not isinstance(numbers, (list, tuple, np.ndarray)):
+                print(f"경고: 행 {idx}에서 numbers가 예상과 다른 타입: {type(numbers)}, 값: {numbers}")
+                continue
+                
+            # 리스트로 변환
+            if isinstance(numbers, np.ndarray):
+                numbers = numbers.tolist()
+            elif isinstance(numbers, tuple):
+                numbers = list(numbers)
+                
+            # 길이 체크
+            if len(numbers) != 6:
+                continue
+                
+            # 모든 요소가 정수인지 확인
+            if not all(isinstance(n, int) for n in numbers):
+                continue
+                
             # 모든 2개 조합에 대해 동시 출현 카운트
-            for i in range(len(numbers)):
-                for j in range(i + 1, len(numbers)):
-                    pair = tuple(sorted([numbers[i], numbers[j]]))
-                    cooccurrence_count[pair] += 1
-                    total_combinations += 1
+            try:
+                for i in range(len(numbers)):
+                    for j in range(i + 1, len(numbers)):
+                        pair = tuple(sorted([numbers[i], numbers[j]]))
+                        cooccurrence_count[pair] += 1
+                        total_combinations += 1
+            except Exception as e:
+                print(f"경고: 행 {idx}에서 조합 생성 중 오류: {e}, numbers: {numbers}")
+                continue
         
-        # 가장 자주 함께 나오는 번호 쌍
+        if not cooccurrence_count:
+            return {
+                'most_common_pairs': [],
+                'top_companions': {},
+                'total_pair_combinations': 0,
+                'average_cooccurrence': 0,
+                'unique_pairs': 0
+            }
+        
+        # 가장 자주 함께 나오는 번호 쌍 (상위 20개)
         most_common_pairs = sorted(cooccurrence_count.items(), key=lambda x: x[1], reverse=True)[:20]
         
         # 특정 번호와 자주 함께 나오는 번호들
@@ -268,8 +363,54 @@ class BasicStatistics:
         return {
             'most_common_pairs': most_common_pairs,
             'top_companions': top_companions,
-            'total_pair_combinations': total_combinations
+            'total_pair_combinations': total_combinations,
+            'average_cooccurrence': total_combinations / len(cooccurrence_count) if cooccurrence_count else 0,
+            'unique_pairs': len(cooccurrence_count)
         }
+
+    def _extract_numbers_safely(self, row, winning_nums):
+        """안전하게 당첨번호 추출 - 항상 리스트 반환 보장"""
+        try:
+            if isinstance(winning_nums, (list, tuple, np.ndarray)):
+                result = list(winning_nums)
+                # 모든 요소가 숫자인지 확인
+                if all(isinstance(n, (int, float)) for n in result):
+                    return [int(n) for n in result]
+                
+            elif isinstance(winning_nums, str):
+                try:
+                    nums = [int(x.strip()) for x in winning_nums.strip('[]').split(',')]
+                    return nums if len(nums) == 6 else []
+                except:
+                    return []
+                    
+            elif isinstance(winning_nums, (int, float)):
+                # 개별 번호 컬럼에서 추출
+                nums = []
+                for i in range(1, 7):
+                    col_name = f'number_{i}'
+                    if col_name in row and pd.notna(row[col_name]):
+                        try:
+                            nums.append(int(row[col_name]))
+                        except:
+                            continue
+                return nums if len(nums) == 6 else []
+            
+            # 기타 경우: 개별 번호 컬럼들 시도
+            nums = []
+            for i in range(1, 7):
+                col_name = f'number_{i}'
+                if col_name in row and pd.notna(row[col_name]):
+                    try:
+                        nums.append(int(row[col_name]))
+                    except:
+                        continue
+            
+            return nums if len(nums) == 6 else []
+            
+        except Exception as e:
+            print(f"_extract_numbers_safely 오류: {e}, winning_nums: {winning_nums}, type: {type(winning_nums)}")
+            return []
 
 
 class FrequencyAnalyzer:
@@ -279,11 +420,62 @@ class FrequencyAnalyzer:
         self.data = data
         
     def analyze(self) -> Dict[str, Any]:
-        """빈도 분석 수행"""
+        """빈도 분석 수행 - 안전한 winning_numbers 처리"""
         # 모든 당첨번호 수집
         all_numbers = []
+        
         for _, row in self.data.iterrows():
-            all_numbers.extend(row['winning_numbers'])
+            winning_nums = row['winning_numbers']
+            
+            # 데이터 타입에 따른 안전한 처리
+            if isinstance(winning_nums, (list, tuple, np.ndarray)):
+                # 리스트/튜플/배열인 경우
+                all_numbers.extend(winning_nums)
+            elif isinstance(winning_nums, str):
+                # 문자열인 경우 파싱 시도
+                try:
+                    nums = [int(x.strip()) for x in winning_nums.strip('[]').split(',')]
+                    all_numbers.extend(nums)
+                except:
+                    continue
+            elif isinstance(winning_nums, int):
+                # int인 경우 개별 번호 컬럼들에서 수집
+                nums = []
+                for i in range(1, 7):
+                    col_name = f'number_{i}'
+                    if col_name in row and isinstance(row[col_name], int):
+                        nums.append(row[col_name])
+                
+                # 유효한 번호들만 추가
+                if len(nums) == 6 and all(1 <= n <= 45 for n in nums):
+                    all_numbers.extend(nums)
+            else:
+                # 기타 경우: 개별 번호 컬럼들 시도
+                try:
+                    nums = [
+                        row.get('number_1'), row.get('number_2'), row.get('number_3'),
+                        row.get('number_4'), row.get('number_5'), row.get('number_6')
+                    ]
+                    # None이 아니고 유효한 숫자인 경우만
+                    valid_nums = [n for n in nums if isinstance(n, int) and 1 <= n <= 45]
+                    if len(valid_nums) == 6:
+                        all_numbers.extend(valid_nums)
+                except:
+                    continue
+        
+        if not all_numbers:
+            # 빈 결과 반환
+            return {
+                'frequency_count': {},
+                'most_frequent_numbers': [],
+                'least_frequent_numbers': [],
+                'frequency_statistics': {
+                    'total_numbers': 0,
+                    'unique_numbers': 0,
+                    'avg_frequency': 0,
+                    'frequency_std': 0
+                }
+            }
         
         # 번호별 빈도 계산
         frequency = Counter(all_numbers)
@@ -292,27 +484,26 @@ class FrequencyAnalyzer:
         # 빈도수를 확률로 변환
         frequency_prob = {num: count / total_draws for num, count in frequency.items()}
         
-        # 이론적 확률 (1/45)과의 차이
-        theoretical_prob = 1 / LottoConstants.TOTAL_BALLS
-        deviations = {num: freq - theoretical_prob for num, freq in frequency_prob.items()}
+        # 가장 빈번한/드문 번호들
+        most_frequent = sorted(frequency.items(), key=lambda x: x[1], reverse=True)[:10]
+        least_frequent = sorted(frequency.items(), key=lambda x: x[1])[:10]
         
-        # 번호를 핫/콜드로 분류
-        hot_numbers, cold_numbers = self._classify_hot_cold(frequency)
-        
-        # 최근 출현 분석
-        recent_appearance = self._analyze_recent_appearance()
+        # 통계 계산
+        frequencies = list(frequency.values())
         
         return {
-            'total_numbers_drawn': total_draws,
             'frequency_count': dict(frequency),
             'frequency_probability': frequency_prob,
-            'most_frequent_numbers': frequency.most_common(10),
-            'least_frequent_numbers': frequency.most_common()[-10:] if len(frequency) >= 10 else [],
-            'hot_numbers': hot_numbers,
-            'cold_numbers': cold_numbers,
-            'theoretical_deviation': deviations,
-            'recent_appearance': recent_appearance,
-            'chi_square_test': self._chi_square_test(frequency)
+            'most_frequent_numbers': [num for num, _ in most_frequent],
+            'least_frequent_numbers': [num for num, _ in least_frequent],
+            'frequency_statistics': {
+                'total_numbers': total_draws,
+                'unique_numbers': len(frequency),
+                'avg_frequency': np.mean(frequencies) if frequencies else 0,
+                'frequency_std': np.std(frequencies) if frequencies else 0,
+                'max_frequency': max(frequencies) if frequencies else 0,
+                'min_frequency': min(frequencies) if frequencies else 0
+            }
         }
     
     def _classify_hot_cold(self, frequency: Counter) -> Tuple[List[int], List[int]]:
@@ -385,92 +576,164 @@ class PatternAnalyzer:
             'consecutive_patterns': self._analyze_consecutive_patterns(),
             'odd_even_patterns': self._analyze_odd_even_patterns(),
             'section_patterns': self._analyze_section_patterns(),
+            'number_gap_patterns': self._analyze_number_gaps(),
             'sum_patterns': self._analyze_sum_patterns(),
             'gap_patterns': self._analyze_gap_patterns(),
             'sequence_patterns': self._analyze_sequence_patterns()
         }
     
     def _analyze_consecutive_patterns(self) -> Dict[str, Any]:
-        """연속번호 패턴 분석"""
+        """연속번호 패턴 분석 - 안전한 winning_numbers 처리"""
         consecutive_counts = []
-        consecutive_examples = []
         
         for _, row in self.data.iterrows():
-            numbers = sorted(row['winning_numbers'])
-            consecutive_count = 0
-            current_consecutive = []
+            winning_nums = row['winning_numbers']
             
-            for i in range(len(numbers) - 1):
-                if numbers[i + 1] - numbers[i] == 1:
-                    if not current_consecutive:
-                        current_consecutive = [numbers[i], numbers[i + 1]]
-                    else:
-                        current_consecutive.append(numbers[i + 1])
+            # 안전한 번호 추출
+            numbers = self._extract_numbers_safely(row, winning_nums)
+            if not numbers:
+                continue
+                
+            numbers = sorted(numbers)
+            
+            # 연속 번호 카운트
+            consecutive = 0
+            current_streak = 1
+            
+            for i in range(1, len(numbers)):
+                if numbers[i] - numbers[i-1] == 1:
+                    current_streak += 1
                 else:
-                    if len(current_consecutive) >= 2:
-                        consecutive_count += 1
-                        if len(consecutive_examples) < 10:
-                            consecutive_examples.append({
-                                'round': row['round_number'],
-                                'sequence': current_consecutive.copy(),
-                                'length': len(current_consecutive)
-                            })
-                    current_consecutive = []
+                    if current_streak >= 2:
+                        consecutive += current_streak
+                    current_streak = 1
             
-            # 마지막 연속 체크
-            if len(current_consecutive) >= 2:
-                consecutive_count += 1
-                if len(consecutive_examples) < 10:
-                    consecutive_examples.append({
-                        'round': row['round_number'],
-                        'sequence': current_consecutive.copy(),
-                        'length': len(current_consecutive)
-                    })
-            
-            consecutive_counts.append(consecutive_count)
+            if current_streak >= 2:
+                consecutive += current_streak
+                
+            consecutive_counts.append(consecutive)
+        
+        if not consecutive_counts:
+            return {
+                'avg_consecutive_per_draw': 0,
+                'max_consecutive': 0,
+                'consecutive_frequency': {},
+                'draws_with_consecutive': 0
+            }
         
         return {
-            'consecutive_frequency': Counter(consecutive_counts),
             'avg_consecutive_per_draw': np.mean(consecutive_counts),
-            'max_consecutive_in_draw': max(consecutive_counts) if consecutive_counts else 0,
-            'examples': consecutive_examples
+            'max_consecutive': max(consecutive_counts),
+            'consecutive_frequency': dict(Counter(consecutive_counts)),
+            'draws_with_consecutive': sum(1 for c in consecutive_counts if c > 0)
         }
     
     def _analyze_odd_even_patterns(self) -> Dict[str, Any]:
         """홀짝 패턴 분석"""
-        odd_counts = self.data['odd_count'].tolist()
+        odd_counts = []
+        
+        for _, row in self.data.iterrows():
+            winning_nums = row['winning_numbers']
+            numbers = self._extract_numbers_safely(row, winning_nums)
+            if not numbers:
+                continue
+                
+            odd_count = sum(1 for n in numbers if n % 2 == 1)
+            odd_counts.append(odd_count)
+        
+        if not odd_counts:
+            return {
+                'avg_odd_count': 3.0,
+                'odd_count_distribution': {},
+                'most_common_odd_count': [3, 0]
+            }
+        
         odd_distribution = Counter(odd_counts)
+        most_common = odd_distribution.most_common(1)
         
         return {
+            'avg_odd_count': np.mean(odd_counts),
             'odd_count_distribution': dict(odd_distribution),
-            'most_common_odd_count': odd_distribution.most_common(1)[0] if odd_distribution else None,
-            'odd_even_ratio': np.mean(odd_counts) / 6,
-            'balance_score': 1 - abs(np.mean(odd_counts) - 3) / 3  # 3이 완벽한 균형
+            'most_common_odd_count': most_common[0] if most_common else [3, 0]
         }
     
     def _analyze_section_patterns(self) -> Dict[str, Any]:
-        """구간 패턴 분석"""
-        section_patterns = []
+        """구간 패턴 분석 (1-15: 저, 16-30: 중, 31-45: 고)"""
+        section_counts = {'low': [], 'mid': [], 'high': []}
         
         for _, row in self.data.iterrows():
-            pattern = (row['low_count'], row['mid_count'], row['high_count'])
-            section_patterns.append(pattern)
+            winning_nums = row['winning_numbers']
+            numbers = self._extract_numbers_safely(row, winning_nums)
+            if not numbers:
+                continue
+            
+            low_count = sum(1 for n in numbers if n <= 15)
+            mid_count = sum(1 for n in numbers if 16 <= n <= 30) 
+            high_count = sum(1 for n in numbers if n >= 31)
+            
+            section_counts['low'].append(low_count)
+            section_counts['mid'].append(mid_count)
+            section_counts['high'].append(high_count)
         
-        pattern_distribution = Counter(section_patterns)
+        if not section_counts['low']:
+            return {
+                'avg_distribution': {'low': 2.0, 'mid': 2.0, 'high': 2.0},
+                'section_balance_score': 0.5
+            }
         
         return {
-            'pattern_distribution': {str(k): v for k, v in pattern_distribution.items()},
-            'most_common_pattern': pattern_distribution.most_common(1)[0] if pattern_distribution else None,
             'avg_distribution': {
-                'low': np.mean([p[0] for p in section_patterns]),
-                'mid': np.mean([p[1] for p in section_patterns]),
-                'high': np.mean([p[2] for p in section_patterns])
+                'low': np.mean(section_counts['low']),
+                'mid': np.mean(section_counts['mid']),
+                'high': np.mean(section_counts['high'])
+            },
+            'section_balance_score': self._calculate_balance_score(section_counts)
+        }
+    
+    def _analyze_number_gaps(self) -> Dict[str, Any]:
+        """번호 간격 분석"""
+        all_gaps = []
+        
+        for _, row in self.data.iterrows():
+            winning_nums = row['winning_numbers']
+            numbers = self._extract_numbers_safely(row, winning_nums)
+            if not numbers:
+                continue
+                
+            numbers = sorted(numbers)
+            gaps = [numbers[i+1] - numbers[i] for i in range(len(numbers)-1)]
+            all_gaps.extend(gaps)
+        
+        if not all_gaps:
+            return {
+                'avg_gap': 7.5,
+                'gap_distribution': {},
+                'most_common_gap': 1
             }
+        
+        gap_distribution = Counter(all_gaps)
+        most_common = gap_distribution.most_common(1)
+        
+        return {
+            'avg_gap': np.mean(all_gaps),
+            'gap_distribution': dict(gap_distribution),
+            'most_common_gap': most_common[0][0] if most_common else 1
         }
     
     def _analyze_sum_patterns(self) -> Dict[str, Any]:
         """합계 패턴 분석"""
-        sums = self.data['number_sum'].tolist()
+        sums = []
+        
+        # number_sum 컬럼이 있으면 사용, 없으면 직접 계산
+        if 'number_sum' in self.data.columns:
+            sums = [s for s in self.data['number_sum'].tolist() if pd.notna(s)]
+        else:
+            # 직접 계산
+            for _, row in self.data.iterrows():
+                winning_nums = row['winning_numbers']
+                numbers = self._extract_numbers_safely(row, winning_nums)
+                if numbers:
+                    sums.append(sum(numbers))
         
         # 빈 리스트 체크
         if not sums:
@@ -518,9 +781,22 @@ class PatternAnalyzer:
         all_gaps = []
         
         for _, row in self.data.iterrows():
-            numbers = sorted(row['winning_numbers'])
+            winning_nums = row['winning_numbers']
+            numbers = self._extract_numbers_safely(row, winning_nums)
+            if not numbers:
+                continue
+                
+            numbers = sorted(numbers)
             gaps = [numbers[i + 1] - numbers[i] for i in range(len(numbers) - 1)]
             all_gaps.extend(gaps)
+        
+        if not all_gaps:
+            return {
+                'gap_distribution': {},
+                'most_common_gaps': [],
+                'avg_gap': 7.5,
+                'gap_variance': 0
+            }
         
         gap_distribution = Counter(all_gaps)
         
@@ -537,7 +813,12 @@ class PatternAnalyzer:
         geometric_sequences = 0
         
         for _, row in self.data.iterrows():
-            numbers = sorted(row['winning_numbers'])
+            winning_nums = row['winning_numbers']
+            numbers = self._extract_numbers_safely(row, winning_nums)
+            if not numbers:
+                continue
+                
+            numbers = sorted(numbers)
             
             # 등차수열 확인 (최소 3개 이상)
             if self._is_arithmetic_sequence(numbers):
@@ -550,6 +831,54 @@ class PatternAnalyzer:
             'arithmetic_ratio': arithmetic_sequences / len(self.data) if len(self.data) > 0 else 0.0,
             'geometric_sequences': geometric_sequences
         }
+    
+    def _extract_numbers_safely(self, row, winning_nums):
+        """안전하게 당첨번호 추출"""
+        if isinstance(winning_nums, (list, tuple, np.ndarray)):
+            return list(winning_nums)
+        elif isinstance(winning_nums, str):
+            try:
+                nums = [int(x.strip()) for x in winning_nums.strip('[]').split(',')]
+                return nums if len(nums) == 6 else []
+            except:
+                return []
+        elif isinstance(winning_nums, int):
+            # 개별 번호 컬럼에서 추출
+            nums = []
+            for i in range(1, 7):
+                col_name = f'number_{i}'
+                if col_name in row and isinstance(row[col_name], int):
+                    nums.append(row[col_name])
+            return nums if len(nums) == 6 else []
+        else:
+            # 기타 경우: 개별 번호 컬럼들 시도
+            try:
+                nums = [
+                    row.get('number_1'), row.get('number_2'), row.get('number_3'),
+                    row.get('number_4'), row.get('number_5'), row.get('number_6')
+                ]
+                # None이 아니고 유효한 숫자인 경우만
+                valid_nums = [n for n in nums if isinstance(n, int) and 1 <= n <= 45]
+                return valid_nums if len(valid_nums) == 6 else []
+            except:
+                return []
+    
+    def _calculate_balance_score(self, section_counts):
+        """구간 균형 점수 계산"""
+        try:
+            low_avg = np.mean(section_counts['low'])
+            mid_avg = np.mean(section_counts['mid'])
+            high_avg = np.mean(section_counts['high'])
+            
+            # 이상적인 균형은 각 구간에 2개씩
+            ideal = 2.0
+            deviations = [abs(low_avg - ideal), abs(mid_avg - ideal), abs(high_avg - ideal)]
+            max_deviation = max(deviations)
+            
+            # 0에서 1 사이의 점수 (1이 완벽한 균형)
+            return max(0, 1 - max_deviation / 3)
+        except:
+            return 0.5
     
     def _is_arithmetic_sequence(self, numbers: List[int], min_length: int = 3) -> bool:
         """등차수열인지 확인"""

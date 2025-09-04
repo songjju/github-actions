@@ -56,6 +56,32 @@
                         </button>
                     </div>
                 </div>
+                
+                <!-- 고급 기능 버튼 -->
+                <div class="mt-4">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <button id="fullAnalysisButton" class="btn btn-outline-success btn-block" onclick="runFullAnalysis()">
+                                📊 전체 분석 실행
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 전체 분석 로딩 -->
+                <div id="analysisLoading" class="loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>전체 분석을 수행 중입니다... (최대 2분 소요)</p>
+                </div>
+                
+                <!-- 전체 분석 결과 -->
+                <div id="analysisResult" class="mt-3" style="display: none;">
+                    <div class="alert alert-success">
+                        <h5>✅ 전체 분석 완료</h5>
+                        <p id="analysisMessage">분석이 성공적으로 완료되었습니다.</p>
+                        <pre id="analysisOutput" class="mt-2" style="max-height: 200px; overflow-y: auto; font-size: 0.8em;"></pre>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -72,6 +98,11 @@
                     <li><strong>가장 많이 나온 번호:</strong> {{ stats.most_frequent }}</li>
                     <li><strong>가장 적게 나온 번호:</strong> {{ stats.least_frequent }}</li>
                 </ul>
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('system_check') }}" class="btn btn-outline-primary btn-sm">
+                        시스템 정보 보기
+                    </a>
+                </div>
             </div>
         </div>
         
@@ -99,6 +130,7 @@
                     <li>"예측 번호 생성하기" 버튼을 클릭하세요</li>
                     <li>AI가 분석한 최적의 번호를 확인하세요</li>
                     <li>예측 기록에서 과거 결과를 볼 수 있습니다</li>
+                    <li><strong>전체 분석 실행</strong>으로 고급 분석 수행</li>
                 </ol>
             </div>
         </div>
@@ -165,6 +197,61 @@ async function generatePrediction() {
         button.disabled = false;
         button.innerHTML = '🎲 예측 번호 생성하기';
         hideLoading(loading);
+    }
+}
+
+// 전체 분석 실행
+async function runFullAnalysis() {
+    const button = document.getElementById('fullAnalysisButton');
+    const loading = document.getElementById('analysisLoading');
+    const result = document.getElementById('analysisResult');
+    const message = document.getElementById('analysisMessage');
+    const output = document.getElementById('analysisOutput');
+    
+    // UI 상태 변경
+    button.disabled = true;
+    button.innerHTML = '분석 중...';
+    loading.style.display = 'block';
+    result.style.display = 'none';
+    
+    try {
+        // 전체 분석 API 호출
+        const response = await fetch('/run-analysis', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            message.textContent = data.message;
+            output.textContent = data.output || '분석이 완료되었습니다.';
+            result.className = 'mt-3 alert alert-success';
+            showAlert('전체 분석이 완료되었습니다! 📊', 'success');
+        } else {
+            message.textContent = '분석 중 오류가 발생했습니다.';
+            output.textContent = data.error || '알 수 없는 오류';
+            result.className = 'mt-3 alert alert-danger';
+            showAlert('분석 실행에 실패했습니다: ' + data.error, 'danger');
+        }
+        
+        result.style.display = 'block';
+        result.scrollIntoView({ behavior: 'smooth' });
+        
+    } catch (error) {
+        console.error('Analysis error:', error);
+        message.textContent = '네트워크 오류가 발생했습니다.';
+        output.textContent = error.message;
+        result.className = 'mt-3 alert alert-danger';
+        result.style.display = 'block';
+        showAlert('네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.', 'danger');
+    } finally {
+        // UI 상태 복원
+        button.disabled = false;
+        button.innerHTML = '📊 전체 분석 실행';
+        loading.style.display = 'none';
     }
 }
 

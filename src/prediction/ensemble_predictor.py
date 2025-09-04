@@ -623,6 +623,11 @@ class EnsemblePredictor:
         
         return prediction_sets
     
+    def predict_numbers(self, count: int = 6) -> List[int]:
+        """검증 시스템 호환용 예측 메서드"""
+        result = self.predict_ensemble(count)
+        return result['final_prediction']
+    
     def get_predictor_performance(self) -> Dict[str, Any]:
         """예측기별 성능 정보 반환"""
         performance = {}

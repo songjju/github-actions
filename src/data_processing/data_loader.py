@@ -82,7 +82,7 @@ class LottoDataLoader:
         except Exception as e:
             self.logger.error(f"데이터 로딩 중 오류 발생: {e}")
             raise
-    
+
     def _load_complex_csv(self) -> pd.DataFrame:
         """
         CSV 파일 로딩 (새로운 깔끔한 구조)
@@ -109,7 +109,7 @@ class LottoDataLoader:
     
     def _preprocess_data(self) -> pd.DataFrame:
         """
-        데이터 전처리 수행 (새로운 CSV 구조에 맞춰 수정)
+        데이터 전처리 수행 (CSV 구조에 맞춰 수정)
         
         Returns:
             pd.DataFrame: 전처리된 데이터
@@ -117,96 +117,148 @@ class LottoDataLoader:
         df = self.raw_data.copy()
         
         try:
+            self.logger.info(f"원본 데이터 전처리 시작: {len(df)}행")
+            
+            # 데이터가 비어있는지 확인
+            if df.empty:
+                raise ValueError("원본 데이터가 비어있습니다.")
+            
+            # 필수 컬럼 존재 확인
+            required_columns = ['num1', 'num2', 'num3', 'num4', 'num5', 'num6']
+            missing_columns = [col for col in required_columns if col not in df.columns]
+            
+            if missing_columns:
+                self.logger.error(f"필수 컬럼 누락: {missing_columns}")
+                self.logger.error(f"실제 컬럼: {list(df.columns)}")
+                raise ValueError(f"필수 컬럼이 누락되었습니다: {missing_columns}")
+            
             # 새로운 DataFrame 구조로 변환
             processed_rows = []
+            skipped_rows = 0
             
             for idx, row in df.iterrows():
                 try:
-                    # 당첨번호 6개 추출 (num1 ~ num6)
+                    # 당첨번호 6개 추출
                     winning_numbers = [
                         int(row['num1']), int(row['num2']), int(row['num3']),
                         int(row['num4']), int(row['num5']), int(row['num6'])
                     ]
                     
-                    # 보너스 번호 추출
-                    bonus_number = int(row['bonus'])
-                    
-                    # 회차 및 날짜 정보
-                    round_number = int(row['round'])
-                    draw_date = str(row['draw_date'])
-                    
-                    # 유효성 검증
+                    # 번호 유효성 검사
                     if not all(1 <= num <= 45 for num in winning_numbers):
-                        self.logger.warning(f"행 {idx}: 유효하지 않은 당첨번호 범위")
+                        self.logger.warning(f"행 {idx}: 유효하지 않은 번호 범위 {winning_numbers}")
+                        skipped_rows += 1
                         continue
                     
-                    if not (1 <= bonus_number <= 45):
-                        self.logger.warning(f"행 {idx}: 유효하지 않은 보너스번호 범위")
-                        continue
-                    
+                    # 중복 번호 확인
                     if len(set(winning_numbers)) != 6:
-                        self.logger.warning(f"행 {idx}: 중복된 당첨번호")
+                        self.logger.warning(f"행 {idx}: 중복 번호 발견 {winning_numbers}")
+                        skipped_rows += 1
                         continue
                     
-                    if bonus_number in winning_numbers:
-                        self.logger.warning(f"행 {idx}: 보너스번호가 당첨번호와 중복")
-                        continue
+                    # 보너스 번호 처리
+                    bonus_number = None
+                    if 'bonus' in df.columns and pd.notna(row['bonus']):
+                        try:
+                            bonus_number = int(row['bonus'])
+                            if not (1 <= bonus_number <= 45):
+                                self.logger.warning(f"행 {idx}: 유효하지 않은 보너스 번호 {bonus_number}")
+                                bonus_number = None
+                        except (ValueError, TypeError):
+                            self.logger.warning(f"행 {idx}: 보너스 번호 변환 실패")
+                            bonus_number = None
                     
+                    # 추가 통계 계산
+                    number_sum = sum(winning_numbers)
+                    odd_count = sum(1 for num in winning_numbers if num % 2 == 1)
+                    even_count = 6 - odd_count
+                    low_count = sum(1 for num in winning_numbers if num <= 15)
+                    mid_count = sum(1 for num in winning_numbers if 16 <= num <= 30)
+                    high_count = sum(1 for num in winning_numbers if num >= 31)
+                    
+                    # 처리된 행 데이터 생성
                     processed_row = {
-                        'round_number': round_number,
-                        'draw_date': draw_date,
-                        'year': int(row['year']) if pd.notna(row['year']) else 2025,
+                        # 기본 정보
+                        'round_number': int(row['round']) if 'round' in df.columns and pd.notna(row['round']) else idx + 1,
+                        'year': int(row['year']) if 'year' in df.columns and pd.notna(row['year']) else 2025,
+                        'draw_date': str(row['draw_date']) if 'draw_date' in df.columns and pd.notna(row['draw_date']) else '',
+                        
+                        # 당첨번호 (개별)
                         'number_1': winning_numbers[0],
                         'number_2': winning_numbers[1], 
                         'number_3': winning_numbers[2],
                         'number_4': winning_numbers[3],
                         'number_5': winning_numbers[4],
                         'number_6': winning_numbers[5],
-                        'bonus_number': bonus_number,
-                        'winning_numbers': sorted(winning_numbers),  # 정렬된 당첨번호
-                        'number_sum': sum(winning_numbers),
-                        'odd_count': sum(1 for n in winning_numbers if n % 2 == 1),
-                        'even_count': sum(1 for n in winning_numbers if n % 2 == 0),
-                        'low_count': sum(1 for n in winning_numbers if n <= 15),
-                        'mid_count': sum(1 for n in winning_numbers if 16 <= n <= 30),
-                        'high_count': sum(1 for n in winning_numbers if n >= 31),
                         
-                        # 추가 당첨 정보 (선택적)
-                        '1st_winners': int(row['1st_winners']) if pd.notna(row['1st_winners']) else 0,
-                        '1st_prize': str(row['1st_prize']) if pd.notna(row['1st_prize']) else '',
+                        # 당첨번호 (리스트)
+                        'winning_numbers': winning_numbers,
+                        'bonus_number': bonus_number,
+                        
+                        # 통계 정보
+                        'number_sum': number_sum,
+                        'odd_count': odd_count,
+                        'even_count': even_count,
+                        'low_count': low_count,   # 1-15
+                        'mid_count': mid_count,   # 16-30  
+                        'high_count': high_count, # 31-45
+                        
+                        # 당첨 정보 (있다면)
+                        '1st_winners': row.get('1st_winners', 0),
+                        '1st_prize': str(row.get('1st_prize', '')) if pd.notna(row.get('1st_prize')) else '',
                     }
                     
                     processed_rows.append(processed_row)
                     
                 except Exception as e:
-                    self.logger.warning(f"행 {idx} 처리 중 오류: {e}")
+                    self.logger.warning(f"행 {idx} 처리 중 오류 (건너뜀): {e}")
+                    skipped_rows += 1
                     continue
             
+            # DataFrame 생성
             if not processed_rows:
                 raise ValueError("처리된 유효한 데이터가 없습니다.")
             
-            # DataFrame 생성
             processed_df = pd.DataFrame(processed_rows)
             
-            # 회차 번호로 정렬 (최신 순)
-            processed_df = processed_df.sort_values('round_number', ascending=False).reset_index(drop=True)
+            # 정렬 (최신 회차가 위로)
+            if 'round_number' in processed_df.columns:
+                processed_df = processed_df.sort_values('round_number', ascending=False).reset_index(drop=True)
             
-            self.logger.info(f"데이터 전처리 완료: {len(processed_df)}개 유효 행")
-            self.logger.info(f"회차 범위: {processed_df['round_number'].min()} ~ {processed_df['round_number'].max()}")
+            self.logger.info(f"데이터 전처리 완료: {len(processed_df)}행 처리, {skipped_rows}행 건너뜀")
             
             return processed_df
             
         except Exception as e:
             self.logger.error(f"데이터 전처리 중 오류: {e}")
             raise
-    
+
+    # 추가: load_sample_data 메서드도 추가
+    def load_sample_data(self, n_samples: int = 100) -> pd.DataFrame:
+        """
+        샘플 데이터 로딩
+        
+        Args:
+            n_samples: 로딩할 샘플 수
+            
+        Returns:
+            pd.DataFrame: 샘플 데이터
+        """
+        if self.processed_data is None:
+            self.load_and_preprocess()
+        
+        if self.processed_data is None or self.processed_data.empty:
+            return pd.DataFrame()
+        
+        return self.processed_data.head(n_samples)
+        
     def _extract_round_number(self, row: pd.Series) -> Optional[int]:
         """
         행에서 회차 번호 추출 (새로운 구조에서는 'round' 컬럼 직접 사용)
-        
+            
         Args:
             row (pd.Series): 데이터 행
-            
+                
         Returns:
             Optional[int]: 회차 번호
         """

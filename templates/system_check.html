@@ -1,136 +1,234 @@
 {% extends "base.html" %}
 
-{% block title %}로또 예측 시스템 - 시스템 확인{% endblock %}
+{% block title %}시스템 상태 확인{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <div class="card card-custom">
-            <div class="card-body">
-                <h3 class="card-title mb-4">🔍 시스템 상태 확인</h3>
-                
-                <!-- 핵심 파일 확인 -->
-                <div class="mb-4">
-                    <h5>📁 핵심 파일 상태</h5>
-                    <div class="list-group">
-                        <div class="list-group-item d-flex justify-content-between align-items-center">
-                            <span>
-                                <strong>main.py</strong> - 로또 예측 시스템 메인 스크립트
-                            </span>
-                            {% if status.main_py_exists %}
-                                <span class="badge bg-success">✅ 존재</span>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card card-custom">
+                <div class="card-body">
+                    <h3 class="card-title mb-4">🔧 시스템 상태 확인</h3>
+                    
+                    <!-- 환경 정보 표시 -->
+                    <div class="alert {% if security.debug_mode %}alert-warning{% else %}alert-info{% endif %} mb-4">
+                        <h5>🛡️ 보안 모드</h5>
+                        <p class="mb-1">
+                            <strong>환경:</strong> {{ status.environment|title }}
+                            {% if security.debug_mode %}
+                                <span class="badge bg-warning text-dark">개발 모드</span>
                             {% else %}
-                                <span class="badge bg-danger">❌ 없음</span>
+                                <span class="badge bg-success">프로덕션 모드</span>
                             {% endif %}
+                        </p>
+                        <p class="mb-1">
+                            <strong>접근 레벨:</strong> {{ security.access_level|title }}
+                        </p>
+                        <p class="mb-0">
+                            <strong>마지막 확인:</strong> {{ status.last_check }}
+                        </p>
+                        {% if not security.debug_mode %}
+                        <small class="text-muted">
+                            상세 정보를 보려면 환경변수 LOTTO_DEBUG=true로 설정하세요.
+                        </small>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- 기본 시스템 상태 -->
+                    <div class="mb-4">
+                        <h5>📊 핵심 시스템 상태</h5>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="border rounded p-3">
+                                    <h6>🐍 애플리케이션</h6>
+                                    <ul class="list-unstyled mb-0">
+                                        <li>
+                                            <strong>main.py</strong>
+                                            {% if status.main_py_exists %}
+                                                <span class="badge bg-success">✅ 존재</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">❌ 없음</span>
+                                            {% endif %}
+                                        </li>
+                                        <li>
+                                            <strong>상태:</strong> {{ status.app_status|title }}
+                                        </li>
+                                        <li>
+                                            <strong>Python:</strong> {{ status.python_version }}
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="border rounded p-3">
+                                    <h6>📄 데이터</h6>
+                                    <ul class="list-unstyled mb-0">
+                                        <li>
+                                            <strong>CSV 데이터</strong>
+                                            {% if status.csv_data_exists %}
+                                                <span class="badge bg-success">✅ 존재</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">❌ 없음</span>
+                                            {% endif %}
+                                        </li>
+                                        <li>
+                                            <strong>예측 기록:</strong> {{ status.total_predictions }}개
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
+                    </div>
+                    
+                    <!-- 디렉토리 상태 -->
+                    <div class="mb-4">
+                        <h5>📁 디렉토리 상태</h5>
+                        <div class="row">
+                            <div class="col-md-3 mb-2">
+                                <span class="badge {% if status.output_dir_exists %}bg-success{% else %}bg-danger{% endif %}">
+                                    outputs/ {% if status.output_dir_exists %}✅{% else %}❌{% endif %}
+                                </span>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <span class="badge {% if status.predictions_dir_exists %}bg-success{% else %}bg-secondary{% endif %}">
+                                    predictions/ {% if status.predictions_dir_exists %}✅{% else %}➖{% endif %}
+                                </span>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <span class="badge {% if status.reports_dir_exists %}bg-success{% else %}bg-secondary{% endif %}">
+                                    reports/ {% if status.reports_dir_exists %}✅{% else %}➖{% endif %}
+                                </span>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <span class="badge {% if status.logs_dir_exists %}bg-success{% else %}bg-secondary{% endif %}">
+                                    logs/ {% if status.logs_dir_exists %}✅{% else %}➖{% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 개발 모드 전용 상세 정보 -->
+                    {% if security.debug_mode and security.sensitive_info_enabled %}
+                    <div class="mb-4">
+                        <h5>🔍 상세 정보 (개발 모드 전용)</h5>
                         
-                        <div class="list-group-item d-flex justify-content-between align-items-center">
-                            <span>
-                                <strong>lotto_results.csv</strong> - 로또 데이터 파일
-                            </span>
-                            {% if status.csv_data_exists %}
-                                <span class="badge bg-success">✅ 존재</span>
-                            {% else %}
-                                <span class="badge bg-warning">⚠️ 없음</span>
+                        <!-- 시스템 정보 -->
+                        {% if status.current_dir %}
+                        <div class="alert alert-warning">
+                            <h6>⚠️ 민감 정보 (개발 환경 전용)</h6>
+                            <p><strong>작업 디렉토리:</strong> <code>{{ status.current_dir }}</code></p>
+                            <p><strong>Python 전체 버전:</strong></p>
+                            <pre class="small">{{ status.python_full_version }}</pre>
+                            {% if status.file_count %}
+                            <p><strong>현재 디렉토리 파일 수:</strong> {{ status.file_count }}개</p>
                             {% endif %}
                         </div>
+                        {% endif %}
                         
-                        <div class="list-group-item d-flex justify-content-between align-items-center">
-                            <span>
-                                <strong>outputs/</strong> - 출력 디렉토리
-                            </span>
-                            {% if status.output_dir_exists %}
-                                <span class="badge bg-success">✅ 존재</span>
-                            {% else %}
-                                <span class="badge bg-danger">❌ 없음</span>
-                            {% endif %}
+                        <!-- 주요 파일 상태 -->
+                        {% if status.key_files %}
+                        <div class="mb-3">
+                            <h6>📋 주요 파일 상태</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>파일</th>
+                                            <th>상태</th>
+                                            <th>크기</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for file_path, info in status.key_files.items() %}
+                                        <tr>
+                                            <td><code>{{ file_path }}</code></td>
+                                            <td>
+                                                {% if info.exists %}
+                                                    <span class="badge bg-success">존재</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">없음</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ info.size }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- 디렉토리 구조 -->
+                        {% if status.directory_structure %}
+                        <div class="mb-3">
+                            <h6>🗂️ 디렉토리 구조</h6>
+                            <div class="row">
+                                {% for dir_path, info in status.directory_structure.items() %}
+                                <div class="col-md-4 mb-2">
+                                    <div class="border rounded p-2">
+                                        <strong>{{ dir_path }}</strong>
+                                        {% if info.get('exists', True) != False %}
+                                            <br><small>파일: {{ info.files }}개, 폴더: {{ info.subdirs }}개</small>
+                                        {% else %}
+                                            <br><small class="text-muted">존재하지 않음</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- 오류 표시 -->
+                    {% if status.error_message %}
+                    <div class="alert alert-danger">
+                        <h5>❌ 시스템 오류</h5>
+                        <p>{{ status.error_message }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- 액션 버튼 -->
+                    <div class="mb-4">
+                        <h5>🛠️ 시스템 작업</h5>
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-outline-info" onclick="testPrediction()">
+                                🧪 예측 테스트
+                            </button>
+                            <button class="btn btn-outline-success" onclick="runFullAnalysis()">
+                                📊 전체 분석 실행
+                            </button>
+                            <button class="btn btn-outline-secondary" onclick="location.reload()">
+                                🔄 새로고침
+                            </button>
+                            <a href="{{ url_for('index') }}" class="btn btn-outline-primary">
+                                🏠 메인으로
+                            </a>
                         </div>
                     </div>
-                </div>
-                
-                <!-- 시스템 정보 -->
-                <div class="mb-4">
-                    <h5>💻 시스템 정보</h5>
-                    <div class="table-responsive">
-                        <table class="table table-bordered">
-                            <tr>
-                                <th>Python 버전</th>
-                                <td><code>{{ status.python_version }}</code></td>
-                            </tr>
-                            <tr>
-                                <th>작업 디렉토리</th>
-                                <td><code>{{ status.current_dir }}</code></td>
-                            </tr>
-                            <tr>
-                                <th>현재 디렉토리 파일 수</th>
-                                <td>{{ status.files_in_dir | length }}개</td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-                
-                <!-- 디렉토리 파일 목록 -->
-                <div class="mb-4">
-                    <h5>📂 현재 디렉토리 파일 목록</h5>
-                    <div class="row">
-                        {% for file in status.files_in_dir %}
-                        <div class="col-md-3 mb-2">
-                            <span class="badge bg-light text-dark">
-                                {% if file.endswith('.py') %}🐍
-                                {% elif file.endswith('.csv') %}📊
-                                {% elif file.endswith('.txt') %}📄
-                                {% elif file.endswith('.json') %}📋
-                                {% else %}📁{% endif %}
-                                {{ file }}
-                            </span>
+                    
+                    <!-- 테스트 결과 영역 -->
+                    <div id="testResults" style="display: none;" class="mt-4">
+                        <h5>🧪 테스트 결과</h5>
+                        <div id="testOutput" class="bg-dark text-light p-3 rounded">
+                            <!-- 테스트 결과가 여기에 표시됩니다 -->
                         </div>
-                        {% endfor %}
                     </div>
-                </div>
-                
-                <!-- 권장사항 -->
-                <div class="mb-4">
-                    <h5>💡 설정 권장사항</h5>
-                    <div class="alert alert-info">
-                        <ul class="mb-0">
-                            {% if not status.main_py_exists %}
-                            <li><strong>main.py 파일이 필요합니다.</strong> GitHub 레포지토리에서 main.py를 다운로드하여 같은 디렉토리에 위치시켜주세요.</li>
-                            {% endif %}
-                            
-                            {% if not status.csv_data_exists %}
-                            <li><strong>lotto_results.csv 파일을 준비하세요.</strong> 로또 당첨 데이터 파일이 있어야 정확한 예측이 가능합니다.</li>
-                            {% endif %}
-                            
-                            <li>모든 필요한 Python 패키지가 설치되어 있는지 확인하세요: <code>pip install -r requirements.txt</code></li>
-                            <li>main.py가 독립적으로 실행되는지 테스트해보세요: <code>python main.py --predictions 3</code></li>
-                        </ul>
+                    
+                    <!-- 환경변수 설정 안내 -->
+                    {% if not security.debug_mode %}
+                    <div class="mt-4">
+                        <div class="alert alert-light">
+                            <h6>💡 개발자 정보</h6>
+                            <p class="mb-1">상세 시스템 정보를 보려면 다음 환경변수를 설정하세요:</p>
+                            <ul class="mb-0">
+                                <li><code>LOTTO_DEBUG=true</code> - 개발 모드 활성화</li>
+                                <li><code>LOTTO_SHOW_SENSITIVE=true</code> - 민감 정보 표시 (개발용)</li>
+                            </ul>
+                        </div>
                     </div>
-                </div>
-                
-                <!-- 테스트 버튼들 -->
-                <div class="text-center">
-                    <div class="btn-group" role="group">
-                        <button class="btn btn-primary" onclick="testPrediction()">
-                            🎲 예측 테스트
-                        </button>
-                        <button class="btn btn-success" onclick="runFullAnalysis()">
-                            📊 전체 분석 실행
-                        </button>
-                        <button class="btn btn-outline-secondary" onclick="location.reload()">
-                            🔄 새로고침
-                        </button>
-                        <a href="{{ url_for('index') }}" class="btn btn-outline-primary">
-                            🏠 메인으로
-                        </a>
-                    </div>
-                </div>
-                
-                <!-- 테스트 결과 영역 -->
-                <div id="testResults" style="display: none;" class="mt-4">
-                    <h5>🧪 테스트 결과</h5>
-                    <div id="testOutput" class="bg-dark text-light p-3 rounded">
-                        <!-- 테스트 결과가 여기에 표시됩니다 -->
-                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -164,7 +262,7 @@ async function testPrediction() {
         showTestResult('예측 테스트 결과', data);
         
         if (data.success) {
-            showAlert('예측 테스트 성공! 🎉', 'success');
+            showAlert('예측 테스트 성공!', 'success');
         } else {
             showAlert('예측 테스트 실패: ' + data.error, 'warning');
         }
@@ -194,7 +292,7 @@ async function runFullAnalysis() {
         showTestResult('전체 분석 결과', data);
         
         if (data.success) {
-            showAlert('전체 분석 완료! 📊', 'success');
+            showAlert('전체 분석 완료!', 'success');
         } else {
             showAlert('분석 실패: ' + data.error, 'danger');
         }
@@ -209,37 +307,35 @@ async function runFullAnalysis() {
 }
 
 function showTestResult(title, data) {
-    const resultDiv = document.getElementById('testResults');
+    const resultsDiv = document.getElementById('testResults');
     const outputDiv = document.getElementById('testOutput');
     
-    let output = '=== ' + title + ' ===\n';
-    output += '시간: ' + new Date().toLocaleString() + '\n';
-    output += '결과: ' + JSON.stringify(data, null, 2);
+    outputDiv.innerHTML = `
+        <h6>${title}</h6>
+        <pre>${JSON.stringify(data, null, 2)}</pre>
+    `;
     
-    outputDiv.textContent = output;
-    resultDiv.style.display = 'block';
-    
-    // 결과 영역으로 스크롤
-    resultDiv.scrollIntoView({ behavior: 'smooth' });
+    resultsDiv.style.display = 'block';
+    resultsDiv.scrollIntoView({ behavior: 'smooth' });
 }
 
-// 페이지 로드 시 상태 체크
-document.addEventListener('DOMContentLoaded', function() {
-    // 숨겨진 input에서 값 가져오기
-    const mainPyExists = document.getElementById('mainPyExists').value === 'true';
-    const csvExists = document.getElementById('csvExists').value === 'true';
+// showAlert 함수가 base.html에 정의되어 있다고 가정
+function showAlert(message, type) {
+    // 간단한 알림 구현 (기존 showAlert 함수가 없는 경우)
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 1050; max-width: 300px;';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(alertDiv);
     
-    if (!mainPyExists) {
-        showAlert('⚠️ main.py 파일이 필요합니다. GitHub에서 다운로드해주세요.', 'warning');
-    }
-    
-    if (!csvExists) {
-        showAlert('📄 CSV 데이터 파일이 있으면 더 정확한 예측이 가능합니다.', 'info');
-    }
-    
-    if (mainPyExists && csvExists) {
-        showAlert('✅ 시스템이 정상적으로 설정되었습니다!', 'success');
-    }
-});
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.parentNode.removeChild(alertDiv);
+        }
+    }, 5000);
+}
 </script>
 {% endblock %}

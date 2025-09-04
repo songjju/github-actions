@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# requirements.txt 먼저 복사
+# requirements.txt 먼저 복사 (Docker 캐시 최적화)
 COPY requirements.txt .
 
 # 🚀 개선: setuptools 버전 확인 후 의존성 설치
@@ -44,6 +44,7 @@ RUN apt-get update && apt-get install -y \
     libffi8 \
     libjpeg62-turbo \
     zlib1g \
+    curl \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
@@ -55,8 +56,12 @@ WORKDIR /app
 # 빌드된 패키지 복사
 COPY --from=builder /install /usr/local
 
-# 🚀 개선: 필요한 디렉토리 사전 생성
+# 🚀 개선: 웹 애플리케이션에 필요한 디렉토리 구조 생성
 RUN mkdir -p \
+    app/templates \
+    app/static/css \
+    app/static/js \
+    app/static/images \
     data/raw \
     data/processed \
     outputs/predictions \
@@ -73,14 +78,19 @@ RUN echo "🎯 Runtime setuptools version:" && pip show setuptools | grep Versio
 
 USER lotto
 
-# 환경변수 설정
+# 🌐 Flask 환경변수 설정 (5000번 포트 고정)
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
+ENV FLASK_APP=app.py
+ENV FLASK_ENV=production
+ENV FLASK_RUN_HOST=0.0.0.0
 
-EXPOSE 8000
+# 🚀 Flask 기본 포트 5000번
+EXPOSE 5000
 
-# 🚀 개선: setuptools 버전 검증 포함
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import setuptools; print(f'Setuptools: {setuptools.__version__}'); assert setuptools.__version__ >= '70.0.0', 'Setuptools version too old'" || exit 1
+# 🩺 건강 상태 체크 (5000번 포트 고정)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD curl -f http://localhost:5000/health || exit 1
 
-CMD ["python", "main.py", "--predictions", "5"]
+# 🎯 Flask 앱 실행 (app.py 직접 실행)
+CMD ["python", "app.py"]
