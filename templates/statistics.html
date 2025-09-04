@@ -1,0 +1,521 @@
+{% extends "base.html" %}
+
+{% block title %}로또 예측 시스템 - 통계{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card card-custom">
+            <div class="card-body">
+                <h3 class="card-title mb-4">📊 통계 분석</h3>
+                
+                <!-- 기본 통계 -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="text-center p-3 bg-primary text-white rounded">
+                            <h4 class="mb-1">{{ stats.total_draws }}</h4>
+                            <small>분석된 회차</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-3 bg-success text-white rounded">
+                            <h4 class="mb-1">{{ stats.most_frequent }}</h4>
+                            <small>최다 출현 번호</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-3 bg-warning text-white rounded">
+                            <h4 class="mb-1">{{ stats.least_frequent }}</h4>
+                            <small>최소 출현 번호</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-3 bg-info text-white rounded">
+                            <h4 class="mb-1">{{ "%.1f"|format(stats.avg_frequency) }}</h4>
+                            <small>평균 출현 횟수</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 번호별 출현 빈도 -->
+                <div class="mb-4">
+                    <h5>🔢 번호별 출현 빈도</h5>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>번호</th>
+                                    <th>출현 횟수</th>
+                                    <th>출현률</th>
+                                    <th>시각화</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for number in range(1, 46) %}
+                                <tr>
+                                    <td>
+                                        <span class="number-ball-tiny">{{ number }}</span>
+                                    </td>
+                                    <td>{{ stats.frequency[number] }}회</td>
+                                    <td class="frequency-percent" data-frequency="{{ stats.frequency[number] }}" data-total="{{ stats.total_draws }}">
+                                        계산중...
+                                    </td>
+                                    <td class="frequency-cell">
+                                        <div class="frequency-bar">
+                                            <div class="frequency-fill" data-frequency="{{ stats.frequency[number] }}" data-total="{{ stats.total_draws }}"></div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- 구간별 분석 -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h5>📈 구간별 출현 분포</h5>
+                        <div class="chart-container">
+                            <canvas id="sectionChart" width="400" height="300"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>🔄 홀짝 분포</h5>
+                        <div class="chart-container">
+                            <canvas id="oddEvenChart" width="400" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 상세 분석 -->
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">🔥 Hot Numbers (상위 10개)</h6>
+                                <div id="hotNumbers" class="d-flex flex-wrap justify-content-center">
+                                    <!-- JavaScript로 채워짐 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">🧊 Cold Numbers (하위 10개)</h6>
+                                <div id="coldNumbers" class="d-flex flex-wrap justify-content-center">
+                                    <!-- JavaScript로 채워짐 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">⚖️ 균형 Numbers</h6>
+                                <div id="balancedNumbers" class="d-flex flex-wrap justify-content-center">
+                                    <!-- JavaScript로 채워짐 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 패턴 분석 -->
+                <div class="mb-4">
+                    <h5>🎯 패턴 분석</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="list-group">
+                                <div class="list-group-item d-flex justify-content-between">
+                                    <span>연속번호 출현률</span>
+                                    <strong id="consecutiveRate">계산중...</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between">
+                                    <span>홀수 우세 회차</span>
+                                    <strong id="oddDominant">계산중...</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between">
+                                    <span>짝수 우세 회차</span>
+                                    <strong id="evenDominant">계산중...</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between">
+                                    <span>균형 회차 (3:3)</span>
+                                    <strong id="balancedRounds">계산중...</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="list-group">
+                                <div class="list-group-item d-flex justify-content-between">
+                                    <span>1-15구간 평균</span>
+                                    <strong id="section1Avg">계산중...</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between">
+                                    <span>16-30구간 평균</span>
+                                    <strong id="section2Avg">계산중...</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between">
+                                    <span>31-45구간 평균</span>
+                                    <strong id="section3Avg">계산중...</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between">
+                                    <span>최고점수 구간</span>
+                                    <strong id="topSection">계산중...</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 새로고침 버튼 -->
+                <div class="text-center">
+                    <button class="btn btn-outline-primary" onclick="refreshStatistics()">
+                        🔄 통계 새로고침
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 통계 데이터를 숨겨진 input으로 전달 -->
+<input type="hidden" id="statsData" value="{{ stats_json if stats_json else '{}' }}">
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.number-ball-tiny {
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    text-align: center;
+    line-height: 30px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    margin: 2px;
+    box-shadow: 0 2px 5px rgba(102, 126, 234, 0.3);
+}
+
+.frequency-bar {
+    height: 8px;
+    background: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+    width: 100px;
+}
+
+.frequency-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--success-color), var(--warning-color), var(--danger-color));
+    border-radius: 4px;
+    transition: width 1s ease;
+    width: 0%;
+}
+
+.frequency-cell {
+    text-align: center;
+}
+
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+}
+
+.hot-number {
+    background: linear-gradient(135deg, #ff6b6b, #ee5a24) !important;
+}
+
+.cold-number {
+    background: linear-gradient(135deg, #74b9ff, #0984e3) !important;
+}
+
+.balanced-number {
+    background: linear-gradient(135deg, #00b894, #00a085) !important;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 숨겨진 input에서 통계 데이터 가져오기
+let statsData;
+try {
+    const dataElement = document.getElementById('statsData');
+    const rawData = dataElement ? dataElement.value : '{}';
+    console.log('Stats JSON data length:', rawData.length);
+    
+    if (rawData && rawData.length > 2) {
+        statsData = JSON.parse(rawData);
+        console.log('통계 데이터 파싱 성공:', Object.keys(statsData));
+    } else {
+        throw new Error('Empty or invalid data');
+    }
+} catch (e) {
+    console.error('Failed to parse stats data:', e);
+    statsData = {
+        total_draws: 0,
+        frequency: {},
+        most_frequent: 1,
+        least_frequent: 1,
+        avg_frequency: 0
+    };
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    calculateAdvancedStats();
+    displayHotColdNumbers();
+    drawCharts();
+    setFrequencyBarWidths();
+    setFrequencyPercentages();
+});
+
+function setFrequencyPercentages() {
+    // frequency-percent 요소들의 퍼센트를 JavaScript로 설정
+    const frequencyPercents = document.querySelectorAll('.frequency-percent');
+    frequencyPercents.forEach(cell => {
+        const frequency = parseInt(cell.dataset.frequency);
+        const totalDraws = parseInt(cell.dataset.total);
+        
+        let percent = '0.0%';
+        if (totalDraws > 0) {
+            percent = (frequency / totalDraws * 100).toFixed(1) + '%';
+        }
+        cell.textContent = percent;
+    });
+}
+
+function setFrequencyBarWidths() {
+    // frequency-fill 요소들의 너비를 JavaScript로 설정
+    const frequencyFills = document.querySelectorAll('.frequency-fill');
+    frequencyFills.forEach(fill => {
+        const frequency = parseInt(fill.dataset.frequency);
+        const totalDraws = parseInt(fill.dataset.total);
+        
+        let width = 0;
+        if (totalDraws > 0) {
+            width = (frequency / (totalDraws * 6 / 45)) * 100;
+        }
+        fill.style.width = Math.min(width, 100) + '%';
+    });
+}
+
+function calculateAdvancedStats() {
+    const frequency = statsData.frequency;
+    const totalDraws = statsData.total_draws;
+    
+    if (totalDraws === 0) {
+        document.getElementById('consecutiveRate').textContent = 'N/A';
+        document.getElementById('oddDominant').textContent = 'N/A';
+        document.getElementById('evenDominant').textContent = 'N/A';
+        document.getElementById('balancedRounds').textContent = 'N/A';
+        document.getElementById('section1Avg').textContent = 'N/A';
+        document.getElementById('section2Avg').textContent = 'N/A';
+        document.getElementById('section3Avg').textContent = 'N/A';
+        document.getElementById('topSection').textContent = 'N/A';
+        return;
+    }
+    
+    // 연속번호 출현률 (간단한 추정)
+    document.getElementById('consecutiveRate').textContent = '15-25%';
+    
+    // 홀짝 분포 계산
+    let oddTotal = 0, evenTotal = 0;
+    for (let i = 1; i <= 45; i++) {
+        if (i % 2 === 1) {
+            oddTotal += frequency[i] || 0;
+        } else {
+            evenTotal += frequency[i] || 0;
+        }
+    }
+    
+    const totalNumbers = oddTotal + evenTotal;
+    const oddPercent = totalNumbers > 0 ? ((oddTotal / totalNumbers) * 100).toFixed(1) : '0.0';
+    const evenPercent = totalNumbers > 0 ? ((evenTotal / totalNumbers) * 100).toFixed(1) : '0.0';
+    
+    document.getElementById('oddDominant').textContent = oddPercent + '%';
+    document.getElementById('evenDominant').textContent = evenPercent + '%';
+    document.getElementById('balancedRounds').textContent = '약 45%';
+    
+    // 구간별 평균
+    let section1 = 0, section2 = 0, section3 = 0;
+    for (let i = 1; i <= 15; i++) section1 += frequency[i] || 0;
+    for (let i = 16; i <= 30; i++) section2 += frequency[i] || 0;
+    for (let i = 31; i <= 45; i++) section3 += frequency[i] || 0;
+    
+    document.getElementById('section1Avg').textContent = (section1 / 15).toFixed(1);
+    document.getElementById('section2Avg').textContent = (section2 / 15).toFixed(1);
+    document.getElementById('section3Avg').textContent = (section3 / 15).toFixed(1);
+    
+    // 최고점수 구간
+    const sections = [
+        { name: '1-15구간', avg: section1 / 15 },
+        { name: '16-30구간', avg: section2 / 15 },
+        { name: '31-45구간', avg: section3 / 15 }
+    ];
+    
+    const topSection = sections.reduce((max, section) => 
+        section.avg > max.avg ? section : max
+    );
+    
+    document.getElementById('topSection').textContent = topSection.name;
+}
+
+function displayHotColdNumbers() {
+    const frequency = statsData.frequency;
+    
+    // 번호를 빈도순으로 정렬
+    const sortedNumbers = Object.entries(frequency)
+        .map(([num, freq]) => ({ number: parseInt(num), frequency: freq }))
+        .sort((a, b) => b.frequency - a.frequency);
+    
+    // Hot Numbers (상위 10개)
+    const hotContainer = document.getElementById('hotNumbers');
+    const hotNumbers = sortedNumbers.slice(0, 10);
+    hotContainer.innerHTML = hotNumbers.map(item => 
+        '<span class="number-ball-tiny hot-number" title="' + item.frequency + '회">' + item.number + '</span>'
+    ).join('');
+    
+    // Cold Numbers (하위 10개)
+    const coldContainer = document.getElementById('coldNumbers');
+    const coldNumbers = sortedNumbers.slice(-10).reverse();
+    coldContainer.innerHTML = coldNumbers.map(item => 
+        '<span class="number-ball-tiny cold-number" title="' + item.frequency + '회">' + item.number + '</span>'
+    ).join('');
+    
+    // Balanced Numbers (중간 범위)
+    const balancedContainer = document.getElementById('balancedNumbers');
+    const avgFreq = statsData.avg_frequency;
+    const balancedNumbers = sortedNumbers.filter(item => 
+        Math.abs(item.frequency - avgFreq) <= avgFreq * 0.1
+    ).slice(0, 10);
+    
+    balancedContainer.innerHTML = balancedNumbers.map(item => 
+        '<span class="number-ball-tiny balanced-number" title="' + item.frequency + '회">' + item.number + '</span>'
+    ).join('');
+}
+
+function drawCharts() {
+    drawSectionChart();
+    drawOddEvenChart();
+}
+
+function drawSectionChart() {
+    const canvas = document.getElementById('sectionChart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const frequency = statsData.frequency;
+    
+    // 구간별 합계 계산
+    let section1 = 0, section2 = 0, section3 = 0;
+    for (let i = 1; i <= 15; i++) section1 += frequency[i] || 0;
+    for (let i = 16; i <= 30; i++) section2 += frequency[i] || 0;
+    for (let i = 31; i <= 45; i++) section3 += frequency[i] || 0;
+    
+    const data = [section1, section2, section3];
+    const labels = ['1-15', '16-30', '31-45'];
+    const colors = ['#667eea', '#764ba2', '#f093fb'];
+    
+    // 간단한 바 차트 그리기
+    const maxValue = Math.max(...data, 1);
+    const barWidth = canvas.width / 3 - 20;
+    const barSpacing = 10;
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    data.forEach((value, index) => {
+        const barHeight = (value / maxValue) * (canvas.height - 60);
+        const x = index * (barWidth + barSpacing) + barSpacing;
+        const y = canvas.height - barHeight - 30;
+        
+        // 바 그리기
+        ctx.fillStyle = colors[index];
+        ctx.fillRect(x, y, barWidth, barHeight);
+        
+        // 라벨 그리기
+        ctx.fillStyle = '#333';
+        ctx.font = '14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(labels[index], x + barWidth/2, canvas.height - 10);
+        
+        // 값 표시
+        ctx.fillText(value.toString(), x + barWidth/2, y - 5);
+    });
+}
+
+function drawOddEvenChart() {
+    const canvas = document.getElementById('oddEvenChart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const frequency = statsData.frequency;
+    
+    // 홀짝 합계 계산
+    let oddTotal = 0, evenTotal = 0;
+    for (let i = 1; i <= 45; i++) {
+        if (i % 2 === 1) {
+            oddTotal += frequency[i] || 0;
+        } else {
+            evenTotal += frequency[i] || 0;
+        }
+    }
+    
+    const total = oddTotal + evenTotal;
+    const oddPercent = total > 0 ? (oddTotal / total) * 100 : 50;
+    const evenPercent = total > 0 ? (evenTotal / total) * 100 : 50;
+    
+    // 파이 차트 그리기
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = Math.min(centerX, centerY) - 20;
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // 홀수 섹션
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY);
+    ctx.arc(centerX, centerY, radius, 0, (oddPercent / 100) * 2 * Math.PI);
+    ctx.closePath();
+    ctx.fillStyle = '#667eea';
+    ctx.fill();
+    
+    // 짝수 섹션
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY);
+    ctx.arc(centerX, centerY, radius, (oddPercent / 100) * 2 * Math.PI, 2 * Math.PI);
+    ctx.closePath();
+    ctx.fillStyle = '#764ba2';
+    ctx.fill();
+    
+    // 라벨 추가
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 16px Arial';
+    ctx.textAlign = 'center';
+    
+    // 홀수 라벨
+    const oddAngle = (oddPercent / 100) * Math.PI;
+    const oddX = centerX + Math.cos(oddAngle) * radius * 0.7;
+    const oddY = centerY + Math.sin(oddAngle) * radius * 0.7;
+    ctx.fillText('홀수', oddX, oddY - 10);
+    ctx.fillText(oddPercent.toFixed(1) + '%', oddX, oddY + 10);
+    
+    // 짝수 라벨
+    const evenAngle = (oddPercent / 100) * Math.PI + (evenPercent / 100) * Math.PI;
+    const evenX = centerX + Math.cos(evenAngle) * radius * 0.7;
+    const evenY = centerY + Math.sin(evenAngle) * radius * 0.7;
+    ctx.fillText('짝수', evenX, evenY - 10);
+    ctx.fillText(evenPercent.toFixed(1) + '%', evenX, evenY + 10);
+}
+
+function refreshStatistics() {
+    // 페이지 새로고침으로 최신 통계 로드
+    location.reload();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,429 @@
+{% extends "base.html" %}
+
+{% block title %}로또 예측 시스템 - 예측 기록{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card card-custom">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3 class="card-title mb-0">📋 예측 기록</h3>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-primary btn-sm" onclick="refreshHistory()" id="refreshBtn">
+                            🔄 새로고침
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 통계 요약 -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="text-center p-3 bg-light rounded">
+                            <h5 class="mb-1">{{ predictions|length }}</h5>
+                            <small class="text-muted">총 예측 수</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-3 bg-light rounded">
+                            <h5 class="mb-1" id="avgConfidence">계산중...</h5>
+                            <small class="text-muted">평균 신뢰도</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-3 bg-light rounded">
+                            <h5 class="mb-1" id="mostUsedMethod">천재 공식</h5>
+                            <small class="text-muted">주 사용 방법</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-3 bg-light rounded">
+                            <h5 class="mb-1" id="todayCount">계산중...</h5>
+                            <small class="text-muted">오늘 예측 수</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 정렬 및 필터 옵션 -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">정렬 기준:</label>
+                        <select class="form-select" id="sortFilter" onchange="sortPredictions()">
+                            <option value="newest">최신순 (기본)</option>
+                            <option value="oldest">오래된 순</option>
+                            <option value="confidence_high">신뢰도 높은 순</option>
+                            <option value="confidence_low">신뢰도 낮은 순</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">신뢰도 필터:</label>
+                        <select class="form-select" id="confidenceFilter" onchange="filterPredictions()">
+                            <option value="">전체</option>
+                            <option value="high">높음 (60% 이상)</option>
+                            <option value="medium">보통 (20-60%)</option>
+                            <option value="low">낮음 (20% 미만)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- 예측 기록 목록 -->
+                <div id="predictionsList">
+                    {% if predictions %}
+                        {% for prediction in predictions %}
+                        <div class="prediction-item border rounded p-3 mb-3" 
+                             data-confidence="{{ prediction.confidence if prediction.confidence else 0.5 }}"
+                             data-confidence-percent="{{ ((prediction.confidence if prediction.confidence else 0.5) * 100)|round }}"
+                             data-timestamp="{{ prediction.timestamp if prediction.timestamp else prediction.date + ' 00:00:00' }}">
+                            <div class="row align-items-center">
+                                <div class="col-md-1">
+                                    <div class="text-center">
+                                        <small class="text-muted">#{{ prediction.id }}</small>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="d-flex flex-wrap gap-1">
+                                        {% for number in prediction.numbers %}
+                                        <span class="number-ball-small">{{ number }}</span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-2">
+                                    <div class="text-center">
+                                        <div class="confidence-bar-small">
+                                            <div class="confidence-fill-small"></div>
+                                        </div>
+                                        <small class="text-muted confidence-text">계산중...</small>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-2">
+                                    <span class="badge bg-primary">
+                                        🧠 천재 공식
+                                    </span>
+                                </div>
+                                
+                                <div class="col-md-3">
+                                    <small class="text-muted">
+                                        {{ prediction.timestamp[:19] | replace('T', ' ') if prediction.timestamp else prediction.date }}
+                                    </small>
+                                    <br>
+                                    <small class="text-muted">{{ (prediction.explanation if prediction.explanation else '통계 분석')[:50] }}...</small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <div class="mb-3">
+                                <i class="display-1 text-muted">📋</i>
+                            </div>
+                            <h5 class="text-muted">아직 예측 기록이 없습니다</h5>
+                            <p class="text-muted">홈으로 가서 첫 번째 예측을 만들어보세요!</p>
+                            <a href="{{ url_for('index') }}" class="btn btn-primary">
+                                🎲 예측 생성하기
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 예측 데이터를 안전하게 전달 -->
+<input type="hidden" id="predictionsData" value="{{ predictions_json if predictions_json else '[]' }}">
+
+<!-- 로딩 오버레이 -->
+<div id="loadingOverlay" class="d-none position-fixed top-0 start-0 w-100 h-100" style="background: rgba(0,0,0,0.5); z-index: 2000;">
+    <div class="d-flex justify-content-center align-items-center h-100">
+        <div class="spinner-border text-light" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.number-ball-small {
+    display: inline-block;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    text-align: center;
+    line-height: 35px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    margin: 2px;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.confidence-bar-small {
+    height: 6px;
+    background: #e9ecef;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 5px;
+}
+
+.confidence-fill-small {
+    height: 100%;
+    background: linear-gradient(90deg, var(--danger-color), var(--warning-color), var(--success-color));
+    border-radius: 3px;
+    transition: width 1s ease;
+    width: 0%;
+}
+
+.prediction-item {
+    transition: all 0.3s ease;
+    border-color: #e9ecef !important;
+}
+
+.prediction-item:hover {
+    border-color: var(--primary-color) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.fade-out {
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+/* 버튼 비활성화 상태 방지 */
+.btn:disabled {
+    pointer-events: none;
+    opacity: 0.65;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 전역 변수
+let allPredictions = [];
+let isLoading = false;
+
+// 예측 데이터 초기화
+function initializePredictionsData() {
+    try {
+        const dataElement = document.getElementById('predictionsData');
+        if (dataElement && dataElement.value) {
+            const rawData = dataElement.value;
+            
+            if (rawData.trim()) {
+                allPredictions = JSON.parse(rawData);
+            } else {
+                allPredictions = [];
+            }
+        } else {
+            allPredictions = [];
+        }
+    } catch (e) {
+        console.error('JSON 파싱 실패:', e);
+        allPredictions = [];
+        showAlert('데이터 로딩 중 오류가 발생했습니다.', 'warning');
+    }
+}
+
+// 페이지 로드 시 초기화
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        // 데이터 초기화
+        initializePredictionsData();
+        
+        // 통계 계산
+        calculateStats();
+        
+        // confidence bar 설정
+        setTimeout(setConfidenceBars, 100);
+        
+    } catch (error) {
+        console.error('초기화 중 오류:', error);
+        showAlert('페이지 초기화 중 오류가 발생했습니다.', 'danger');
+    }
+});
+
+function setConfidenceBars() {
+    const predictionItems = document.querySelectorAll('.prediction-item');
+    predictionItems.forEach(item => {
+        const confidencePercent = parseInt(item.dataset.confidencePercent) || 50;
+        
+        const confidenceFill = item.querySelector('.confidence-fill-small');
+        if (confidenceFill) {
+            confidenceFill.style.width = confidencePercent + '%';
+        }
+        
+        const confidenceText = item.querySelector('.confidence-text');
+        if (confidenceText) {
+            confidenceText.textContent = confidencePercent + '%';
+        }
+    });
+}
+
+function calculateStats() {
+    if (allPredictions.length === 0) {
+        document.getElementById('avgConfidence').textContent = '0%';
+        document.getElementById('todayCount').textContent = '0개';
+        return;
+    }
+    
+    try {
+        // 평균 신뢰도 계산
+        const avgConfidence = allPredictions.reduce((sum, pred) => {
+            const confidence = pred.confidence || 0.5;
+            return sum + confidence;
+        }, 0) / allPredictions.length;
+        document.getElementById('avgConfidence').textContent = Math.round(avgConfidence * 100) + '%';
+        
+        // 오늘 예측 수
+        const today = new Date().toDateString();
+        const todayCount = allPredictions.filter(pred => {
+            const predDate = pred.timestamp ? new Date(pred.timestamp) : new Date(pred.date);
+            return predDate.toDateString() === today;
+        }).length;
+        document.getElementById('todayCount').textContent = todayCount + '개';
+        
+    } catch (error) {
+        console.error('통계 계산 오류:', error);
+    }
+}
+
+function sortPredictions() {
+    const sortFilter = document.getElementById('sortFilter').value;
+    const items = Array.from(document.querySelectorAll('.prediction-item'));
+    
+    items.sort((a, b) => {
+        switch (sortFilter) {
+            case 'newest':
+                return new Date(b.dataset.timestamp) - new Date(a.dataset.timestamp);
+            case 'oldest':
+                return new Date(a.dataset.timestamp) - new Date(b.dataset.timestamp);
+            case 'confidence_high':
+                return parseFloat(b.dataset.confidence) - parseFloat(a.dataset.confidence);
+            case 'confidence_low':
+                return parseFloat(a.dataset.confidence) - parseFloat(b.dataset.confidence);
+            default:
+                return new Date(b.dataset.timestamp) - new Date(a.dataset.timestamp);
+        }
+    });
+    
+    const container = document.getElementById('predictionsList');
+    const emptyState = container.querySelector('.text-center.py-5');
+    
+    // 모든 기존 prediction-item 제거
+    items.forEach(item => item.remove());
+    
+    // 정렬된 아이템들 다시 추가
+    items.forEach(item => {
+        if (emptyState) {
+            container.insertBefore(item, emptyState);
+        } else {
+            container.appendChild(item);
+        }
+    });
+}
+
+function filterPredictions() {
+    const confidenceFilter = document.getElementById('confidenceFilter').value;
+    const items = document.querySelectorAll('.prediction-item');
+    
+    items.forEach(item => {
+        const confidence = parseFloat(item.dataset.confidence);
+        let showItem = true;
+        
+        // 신뢰도 필터
+        if (confidenceFilter) {
+            if (confidenceFilter === 'high' && confidence < 0.6) showItem = false;
+            if (confidenceFilter === 'medium' && (confidence < 0.2 || confidence >= 0.6)) showItem = false;
+            if (confidenceFilter === 'low' && confidence >= 0.2) showItem = false;
+        }
+        
+        if (showItem) {
+            item.style.display = 'block';
+            item.classList.remove('fade-out');
+        } else {
+            item.style.display = 'none';
+            item.classList.add('fade-out');
+        }
+    });
+}
+
+async function refreshHistory() {
+    if (isLoading) return;
+    
+    const refreshBtn = document.getElementById('refreshBtn');
+    
+    try {
+        isLoading = true;
+        refreshBtn.disabled = true;
+        refreshBtn.innerHTML = '🔄 새로고침 중...';
+        
+        showLoadingOverlay(true);
+        
+        setTimeout(() => {
+            location.reload();
+        }, 500);
+        
+    } catch (error) {
+        console.error('새로고침 오류:', error);
+        showAlert('기록 새로고침에 실패했습니다.', 'danger');
+        
+        refreshBtn.disabled = false;
+        refreshBtn.innerHTML = '🔄 새로고침';
+        isLoading = false;
+        showLoadingOverlay(false);
+    }
+}
+
+function showLoadingOverlay(show) {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) {
+        if (show) {
+            overlay.classList.remove('d-none');
+        } else {
+            overlay.classList.add('d-none');
+        }
+    }
+}
+
+// 유틸리티 함수: 알림 표시
+function showAlert(message, type = 'info') {
+    // 기존 알림 제거
+    const existingAlert = document.querySelector('.alert-floating');
+    if (existingAlert) {
+        existingAlert.remove();
+    }
+    
+    // 새 알림 생성
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} alert-dismissible fade show alert-floating`;
+    alert.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        min-width: 300px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    `;
+    
+    alert.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    
+    document.body.appendChild(alert);
+    
+    // 5초 후 자동 제거
+    setTimeout(() => {
+        if (alert && alert.parentNode) {
+            alert.remove();
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}

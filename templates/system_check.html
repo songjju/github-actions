@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block title %}로또 예측 시스템 - 시스템 확인{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card card-custom">
+            <div class="card-body">
+                <h3 class="card-title mb-4">🔍 시스템 상태 확인</h3>
+                
+                <!-- 핵심 파일 확인 -->
+                <div class="mb-4">
+                    <h5>📁 핵심 파일 상태</h5>
+                    <div class="list-group">
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>
+                                <strong>main.py</strong> - 로또 예측 시스템 메인 스크립트
+                            </span>
+                            {% if status.main_py_exists %}
+                                <span class="badge bg-success">✅ 존재</span>
+                            {% else %}
+                                <span class="badge bg-danger">❌ 없음</span>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>
+                                <strong>lotto_results.csv</strong> - 로또 데이터 파일
+                            </span>
+                            {% if status.csv_data_exists %}
+                                <span class="badge bg-success">✅ 존재</span>
+                            {% else %}
+                                <span class="badge bg-warning">⚠️ 없음</span>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>
+                                <strong>outputs/</strong> - 출력 디렉토리
+                            </span>
+                            {% if status.output_dir_exists %}
+                                <span class="badge bg-success">✅ 존재</span>
+                            {% else %}
+                                <span class="badge bg-danger">❌ 없음</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 시스템 정보 -->
+                <div class="mb-4">
+                    <h5>💻 시스템 정보</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tr>
+                                <th>Python 버전</th>
+                                <td><code>{{ status.python_version }}</code></td>
+                            </tr>
+                            <tr>
+                                <th>작업 디렉토리</th>
+                                <td><code>{{ status.current_dir }}</code></td>
+                            </tr>
+                            <tr>
+                                <th>현재 디렉토리 파일 수</th>
+                                <td>{{ status.files_in_dir | length }}개</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- 디렉토리 파일 목록 -->
+                <div class="mb-4">
+                    <h5>📂 현재 디렉토리 파일 목록</h5>
+                    <div class="row">
+                        {% for file in status.files_in_dir %}
+                        <div class="col-md-3 mb-2">
+                            <span class="badge bg-light text-dark">
+                                {% if file.endswith('.py') %}🐍
+                                {% elif file.endswith('.csv') %}📊
+                                {% elif file.endswith('.txt') %}📄
+                                {% elif file.endswith('.json') %}📋
+                                {% else %}📁{% endif %}
+                                {{ file }}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- 권장사항 -->
+                <div class="mb-4">
+                    <h5>💡 설정 권장사항</h5>
+                    <div class="alert alert-info">
+                        <ul class="mb-0">
+                            {% if not status.main_py_exists %}
+                            <li><strong>main.py 파일이 필요합니다.</strong> GitHub 레포지토리에서 main.py를 다운로드하여 같은 디렉토리에 위치시켜주세요.</li>
+                            {% endif %}
+                            
+                            {% if not status.csv_data_exists %}
+                            <li><strong>lotto_results.csv 파일을 준비하세요.</strong> 로또 당첨 데이터 파일이 있어야 정확한 예측이 가능합니다.</li>
+                            {% endif %}
+                            
+                            <li>모든 필요한 Python 패키지가 설치되어 있는지 확인하세요: <code>pip install -r requirements.txt</code></li>
+                            <li>main.py가 독립적으로 실행되는지 테스트해보세요: <code>python main.py --predictions 3</code></li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- 테스트 버튼들 -->
+                <div class="text-center">
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-primary" onclick="testPrediction()">
+                            🎲 예측 테스트
+                        </button>
+                        <button class="btn btn-success" onclick="runFullAnalysis()">
+                            📊 전체 분석 실행
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="location.reload()">
+                            🔄 새로고침
+                        </button>
+                        <a href="{{ url_for('index') }}" class="btn btn-outline-primary">
+                            🏠 메인으로
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- 테스트 결과 영역 -->
+                <div id="testResults" style="display: none;" class="mt-4">
+                    <h5>🧪 테스트 결과</h5>
+                    <div id="testOutput" class="bg-dark text-light p-3 rounded">
+                        <!-- 테스트 결과가 여기에 표시됩니다 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 시스템 상태를 숨겨진 input으로 전달 -->
+<input type="hidden" id="mainPyExists" value="{% if status.main_py_exists %}true{% else %}false{% endif %}">
+<input type="hidden" id="csvExists" value="{% if status.csv_data_exists %}true{% else %}false{% endif %}">
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function testPrediction() {
+    const button = event.target;
+    const originalText = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '⏳ 테스트 중...';
+    
+    try {
+        const response = await fetch('/predict', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ count: 3 })
+        });
+        
+        const data = await response.json();
+        
+        showTestResult('예측 테스트 결과', data);
+        
+        if (data.success) {
+            showAlert('예측 테스트 성공! 🎉', 'success');
+        } else {
+            showAlert('예측 테스트 실패: ' + data.error, 'warning');
+        }
+        
+    } catch (error) {
+        showTestResult('예측 테스트 오류', { error: error.message });
+        showAlert('테스트 실행 중 오류가 발생했습니다.', 'danger');
+    } finally {
+        button.disabled = false;
+        button.innerHTML = originalText;
+    }
+}
+
+async function runFullAnalysis() {
+    const button = event.target;
+    const originalText = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '⏳ 분석 중... (최대 2분)';
+    
+    try {
+        const response = await fetch('/run-analysis', {
+            method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        showTestResult('전체 분석 결과', data);
+        
+        if (data.success) {
+            showAlert('전체 분석 완료! 📊', 'success');
+        } else {
+            showAlert('분석 실패: ' + data.error, 'danger');
+        }
+        
+    } catch (error) {
+        showTestResult('분석 오류', { error: error.message });
+        showAlert('분석 실행 중 오류가 발생했습니다.', 'danger');
+    } finally {
+        button.disabled = false;
+        button.innerHTML = originalText;
+    }
+}
+
+function showTestResult(title, data) {
+    const resultDiv = document.getElementById('testResults');
+    const outputDiv = document.getElementById('testOutput');
+    
+    let output = '=== ' + title + ' ===\n';
+    output += '시간: ' + new Date().toLocaleString() + '\n';
+    output += '결과: ' + JSON.stringify(data, null, 2);
+    
+    outputDiv.textContent = output;
+    resultDiv.style.display = 'block';
+    
+    // 결과 영역으로 스크롤
+    resultDiv.scrollIntoView({ behavior: 'smooth' });
+}
+
+// 페이지 로드 시 상태 체크
+document.addEventListener('DOMContentLoaded', function() {
+    // 숨겨진 input에서 값 가져오기
+    const mainPyExists = document.getElementById('mainPyExists').value === 'true';
+    const csvExists = document.getElementById('csvExists').value === 'true';
+    
+    if (!mainPyExists) {
+        showAlert('⚠️ main.py 파일이 필요합니다. GitHub에서 다운로드해주세요.', 'warning');
+    }
+    
+    if (!csvExists) {
+        showAlert('📄 CSV 데이터 파일이 있으면 더 정확한 예측이 가능합니다.', 'info');
+    }
+    
+    if (mainPyExists && csvExists) {
+        showAlert('✅ 시스템이 정상적으로 설정되었습니다!', 'success');
+    }
+});
+</script>
+{% endblock %}

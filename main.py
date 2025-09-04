@@ -377,22 +377,25 @@ def save_detailed_results(analysis_results, predictions, logger):
         with open(analysis_file, 'w', encoding='utf-8') as f:
             json.dump(serializable_results, f, ensure_ascii=False, indent=2)
         
-        # 3. 히스토리 업데이트
-        history_file = Path('outputs/predictions/prediction_history.txt')  # .txt로 변경
+        # 3. 히스토리 업데이트 - 시간 정보 추가
+        history_file = Path('outputs/predictions/prediction_history.txt')
         if not history_file.exists():
             with open(history_file, 'w', encoding='utf-8') as f:
-                # 헤더 작성
-                f.write("날짜 | ID | 예측번호 | 신뢰도\n")
+                # 헤더 작성 - 시간 컬럼 추가
+                f.write("날짜 | 시간 | ID | 예측번호 | 신뢰도\n")
 
         with open(history_file, 'a', encoding='utf-8') as f:
-            timestamp = datetime.now().strftime('%Y-%m-%d')
+            current_time = datetime.now()
+            date_str = current_time.strftime('%Y-%m-%d')
+            time_str = current_time.strftime('%H:%M:%S')
+            
             for prediction in predictions:
                 # 번호를 쉼표와 공백으로 구분
                 numbers_str = ', '.join(map(str, sorted(prediction['numbers'])))
                 confidence_str = f"{prediction['confidence']*100:.2f}%"
                 
-                # 파이프로 구분된 테이블 형태
-                f.write(f"{timestamp} | {prediction['prediction_id']} | {numbers_str} | {confidence_str}\n")
+                # 파이프로 구분된 테이블 형태 - 시간 컬럼 추가
+                f.write(f"{date_str} | {time_str} | {prediction['prediction_id']} | {numbers_str} | {confidence_str}\n")
         
         logger.info("모든 결과 파일 저장 완료")
         
