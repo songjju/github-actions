@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>별자리 행운 로또 예측 - 로또 예측 시스템</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .main-container { padding: 20px 0; }
+        
+        .zodiac-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 20px;
+        }
+        
+        .zodiac-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .zodiac-item {
+            background: linear-gradient(145deg, #f0f0f0, #ffffff);
+            border: 2px solid transparent;
+            border-radius: 15px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .zodiac-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .zodiac-item.selected {
+            border-color: #667eea;
+            background: linear-gradient(145deg, #667eea, #764ba2);
+            color: white;
+            transform: scale(1.05);
+        }
+        
+        .zodiac-icon { font-size: 2rem; margin-bottom: 8px; display: block; }
+        
+        .element-tag {
+            display: inline-block;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 25px;
+            margin: 5px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+        }
+        
+        .element-tag:hover { transform: scale(1.05); }
+        .element-tag.selected { background: linear-gradient(45deg, #28a745, #20c997); }
+        
+        .number-grid {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            gap: 8px;
+            margin: 15px 0;
+        }
+        
+        .number-btn {
+            aspect-ratio: 1;
+            border: 2px solid #dee2e6;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+        
+        .number-btn:hover {
+            border-color: #667eea;
+            background: #f8f9fa;
+            transform: scale(1.1);
+        }
+        
+        .number-btn.selected {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border-color: #667eea;
+            transform: scale(1.15);
+        }
+        
+        .color-palette {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        
+        .color-item {
+            padding: 15px;
+            border-radius: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
+            color: white;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+        
+        .color-item.selected {
+            border-color: white;
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .prediction-result {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin: 30px 0;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .number-ball {
+            display: inline-block;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(145deg, #ffffff, #f0f0f0);
+            color: #333;
+            border-radius: 50%;
+            line-height: 60px;
+            margin: 10px 5px;
+            font-size: 1.4rem;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            animation: bounceIn 0.6s ease;
+        }
+        
+        @keyframes bounceIn {
+            0% { transform: scale(0) rotate(180deg); opacity: 0; }
+            50% { transform: scale(1.2) rotate(360deg); opacity: 0.8; }
+            100% { transform: scale(1) rotate(360deg); opacity: 1; }
+        }
+        
+        .predict-btn {
+            background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
+            border: none;
+            color: white;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 20px rgba(255, 107, 107, 0.4);
+        }
+        
+        .predict-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.6);
+        }
+        
+        .predict-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .section-title {
+            color: #667eea;
+            font-weight: bold;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 30px;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid white;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .lucky-story {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 5px solid #ffd700;
+        }
+        
+        .breadcrumb {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+        }
+        
+        .breadcrumb a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container main-container">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <!-- 브레드크럼 네비게이션 -->
+                <nav class="breadcrumb">
+                    <a href="/" class="breadcrumb-item">
+                        <i class="fas fa-home me-2"></i>홈
+                    </a>
+                    <span class="breadcrumb-item active">별자리 행운 예측</span>
+                </nav>
+                
+                <!-- 제목 섹션 -->
+                <div class="zodiac-card text-center p-4 mb-4">
+                    <h1 class="display-4 mb-3">
+                        <i class="fas fa-star text-warning me-3"></i>
+                        별자리 행운 로또 예측
+                        <i class="fas fa-star text-warning ms-3"></i>
+                    </h1>
+                    <p class="lead">당신의 별자리와 행운의 요소로 특별한 로또 번호를 만들어보세요!</p>
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        기존 AI 예측 시스템과 별자리 에너지를 결합한 특별한 예측 방식입니다
+                    </small>
+                </div>
+                
+                <!-- 알림 영역 -->
+                <div id="alertArea"></div>
+                
+                <!-- 별자리 선택 섹션 -->
+                <div class="zodiac-card p-4">
+                    <h3 class="section-title">
+                        <i class="fas fa-moon"></i>
+                        1. 별자리 선택
+                    </h3>
+                    <p class="text-muted">당신의 별자리를 선택해주세요</p>
+                    
+                    <div class="zodiac-grid" id="zodiacGrid">
+                        <div class="zodiac-item" data-zodiac="aries">
+                            <span class="zodiac-icon">♈</span>
+                            <div>양자리</div>
+                            <small>(3/21-4/19)</small>
+                        </div>
+                        <div class="zodiac-item" data-zodiac="taurus">
+                            <span class="zodiac-icon">♉</span>
+                            <div>황소자리</div>
+                            <small>(4/20-5/20)</small>
+                        </div>
+                        <div class="zodiac-item" data-zodiac="gemini">
+                            <span class="zodiac-icon">♊</span>
+                            <div>쌍둥이자리</div>
+                            <small>(5/21-6/20)</small>
+                        </div>
+                        <div class="zodiac-item" data-zodiac="cancer">
+                            <span class="zodiac-icon">♋</span>
+                            <div>게자리</div>
+                            <small>(6/21-7/22)</small>
+                        </div>
+                        <div class="zodiac-item" data-zodiac="leo">
+                            <span class="zodiac-icon">♌</span>
+                            <div>사자자리</div>
+                            <small>(7/23-8/22)</small>
+                        </div>
+                        <div class="zodiac-item" data-zodiac="virgo">
+                            <span class="zodiac-icon">♍</span>
+                            <div>처녀자리</div>
+                            <small>(8/23-9/22)</small>
+                        </div>
+                        <div class="zodiac-item" data-zodiac="libra">
+                            <span class="zodiac-icon">♎</span>
+                            <div>천칭자리</div>
+                            <small>(9/23-10/22)</small>
+                        </div>
+                        <div class="zodiac-item" data-zodiac="scorpio">
+                            <span class="zodiac-icon">♏</span>
+                            <div>전갈자리</div>
+                            <small>(10/23-11/21)</small>
+                        </div>
+                        <div class="zodiac-item" data-zodiac="sagittarius">
+                            <span class="zodiac-icon">♐</span>
+                            <div>사수자리</div>
+                            <small>(11/22-12/21)</small>
+                        </div>
+                        <div class="zodiac-item" data-zodiac="capricorn">
+                            <span class="zodiac-icon">♑</span>
+                            <div>염소자리</div>
+                            <small>(12/22-1/19)</small>
+                        </div>
+                        <div class="zodiac-item" data-zodiac="aquarius">
+                            <span class="zodiac-icon">♒</span>
+                            <div>물병자리</div>
+                            <small>(1/20-2/18)</small>
+                        </div>
+                        <div class="zodiac-item" data-zodiac="pisces">
+                            <span class="zodiac-icon">♓</span>
+                            <div>물고기자리</div>
+                            <small>(2/19-3/20)</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 행운의 물건 선택 -->
+                <div class="zodiac-card p-4">
+                    <h3 class="section-title">
+                        <i class="fas fa-gem"></i>
+                        2. 행운의 물건 선택 (최대 3개)
+                    </h3>
+                    <p class="text-muted">당신에게 행운을 가져다줄 것 같은 물건들을 선택해주세요</p>
+                    
+                    <div id="objectTags">
+                        <!-- 물건 태그들이 여기에 동적으로 생성됩니다 -->
+                    </div>
+                    
+                    <div class="mt-3">
+                        <input type="text" class="form-control" id="customObject" 
+                               placeholder="직접 입력하고 싶은 행운의 물건이 있다면 여기에 써주세요">
+                        <button class="btn btn-outline-primary btn-sm mt-2" onclick="addCustomObject()">
+                            <i class="fas fa-plus"></i> 추가
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 행운의 숫자 선택 -->
+                <div class="zodiac-card p-4">
+                    <h3 class="section-title">
+                        <i class="fas fa-hashtag"></i>
+                        3. 행운의 숫자 선택 (최대 5개)
+                    </h3>
+                    <p class="text-muted">당신에게 특별한 의미가 있는 숫자들을 선택해주세요</p>
+                    
+                    <div class="number-grid" id="numberGrid">
+                        <!-- 1-45 번호들이 여기에 생성됩니다 -->
+                    </div>
+                </div>
+                
+                <!-- 행운의 색상 선택 -->
+                <div class="zodiac-card p-4">
+                    <h3 class="section-title">
+                        <i class="fas fa-palette"></i>
+                        4. 행운의 색상 선택 (최대 3개)
+                    </h3>
+                    <p class="text-muted">당신에게 행운을 가져다줄 것 같은 색상들을 선택해주세요</p>
+                    
+                    <div class="color-palette" id="colorPalette">
+                        <!-- 색상들이 여기에 생성됩니다 -->
+                    </div>
+                </div>
+                
+                <!-- 예측 버튼 -->
+                <div class="text-center my-4">
+                    <button class="predict-btn" onclick="generateZodiacPrediction()" id="predictBtn">
+                        <i class="fas fa-magic me-2"></i>
+                        별자리 행운 번호 생성하기
+                    </button>
+                    <div class="mt-2">
+                        <small class="text-white-50">
+                            <i class="fas fa-lightbulb me-1"></i>
+                            기존 AI 시스템 + 별자리 에너지 = 특별한 예측
+                        </small>
+                    </div>
+                </div>
+                
+                <!-- 로딩 -->
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p class="text-white">우주의 에너지와 AI가 협력하여 최적의 번호를 분석 중입니다...</p>
+                </div>
+                
+                <!-- 예측 결과 -->
+                <div class="prediction-result" id="result" style="display: none;">
+                    <h3 class="mb-4">
+                        <i class="fas fa-star-of-life me-2"></i>
+                        당신의 별자리 행운 번호
+                    </h3>
+                    
+                    <div id="numberBalls" class="mb-4">
+                        <!-- 예측 번호들이 여기에 표시됩니다 -->
+                    </div>
+                    
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <h5><i class="fas fa-scroll me-2"></i>행운의 이야기</h5>
+                            <div id="luckyStory" class="lucky-story">
+                                <!-- 행운의 이야기가 여기에 표시됩니다 -->
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h5><i class="fas fa-chart-pie me-2"></i>요소별 영향도</h5>
+                            <div id="elementAnalysis" class="text-start">
+                                <!-- 요소별 분석 결과가 여기에 표시됩니다 -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <small class="opacity-75">
+                            <i class="fas fa-info-circle me-1"></i>
+                            신뢰도: <span id="confidenceLevel">0%</span> | 
+                            생성 시간: <span id="generationTime"></span> |
+                            방식: AI + 별자리 통합
+                        </small>
+                    </div>
+                    
+                    <!-- 다른 예측 방식으로 이동 버튼 -->
+                    <div class="mt-4">
+                        <a href="/" class="btn btn-outline-light me-2">
+                            <i class="fas fa-robot me-1"></i>
+                            기본 AI 예측으로 이동
+                        </a>
+                        <button class="btn btn-outline-light" onclick="generateZodiacPrediction()">
+                            <i class="fas fa-redo me-1"></i>
+                            다시 예측하기
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 전역 변수
+        let selectedZodiac = null;
+        let selectedObjects = [];
+        let selectedNumbers = [];
+        let selectedColors = [];
+        
+        // 물건 목록
+        const objectOptions = [
+            "반지", "목걸이", "팔찌", "시계", "왕관", "거울", "책", "펜", "열쇠",
+            "해바라기", "장미", "화분", "향초", "수정", "진주", "다이아몬드",
+            "스마트폰", "노트", "가족사진", "향수", "예술품", "쿠션", "활",
+            "지구본", "나침반", "저울", "물병", "조개껍데기", "가죽 지갑"
+        ];
+        
+        // 색상 목록
+        const colorOptions = [
+            { name: "빨강", color: "#FF0000" },
+            { name: "주황", color: "#FF8C00" },
+            { name: "노랑", color: "#FFD700" },
+            { name: "초록", color: "#32CD32" },
+            { name: "파랑", color: "#4169E1" },
+            { name: "보라", color: "#9932CC" },
+            { name: "분홍", color: "#FF69B4" },
+            { name: "하늘색", color: "#87CEEB" },
+            { name: "검정", color: "#000000" },
+            { name: "흰색", color: "#FFFFFF" },
+            { name: "회색", color: "#808080" },
+            { name: "갈색", color: "#8B4513" },
+            { name: "황금", color: "#FFD700" },
+            { name: "은색", color: "#C0C0C0" }
+        ];
+        
+        // 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeZodiacSelection();
+            initializeObjectTags();
+            initializeNumberGrid();
+            initializeColorPalette();
+        });
+        
+        // 별자리 선택 초기화
+        function initializeZodiacSelection() {
+            const zodiacItems = document.querySelectorAll('.zodiac-item');
+            zodiacItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    zodiacItems.forEach(zi => zi.classList.remove('selected'));
+                    this.classList.add('selected');
+                    selectedZodiac = this.dataset.zodiac;
+                    showAlert(`${this.querySelector('div').textContent}을(를) 선택했습니다.`, 'info');
+                });
+            });
+        }
+        
+        // 물건 태그 초기화
+        function initializeObjectTags() {
+            const container = document.getElementById('objectTags');
+            objectOptions.forEach(obj => {
+                const tag = document.createElement('button');
+                tag.className = 'element-tag';
+                tag.textContent = obj;
+                tag.onclick = () => toggleObject(obj, tag);
+                container.appendChild(tag);
+            });
+        }
+        
+        // 숫자 그리드 초기화
+        function initializeNumberGrid() {
+            const container = document.getElementById('numberGrid');
+            for (let i = 1; i <= 45; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'number-btn';
+                btn.textContent = i;
+                btn.onclick = () => toggleNumber(i, btn);
+                container.appendChild(btn);
+            }
+        }
+        
+        // 색상 팔레트 초기화
+        function initializeColorPalette() {
+            const container = document.getElementById('colorPalette');
+            colorOptions.forEach(colorObj => {
+                const item = document.createElement('div');
+                item.className = 'color-item';
+                item.style.backgroundColor = colorObj.color;
+                item.textContent = colorObj.name;
+                if (colorObj.color === '#FFFFFF' || colorObj.color === '#FFD700') {
+                    item.style.color = '#333';
+                    item.style.textShadow = 'none';
+                }
+                item.onclick = () => toggleColor(colorObj.name, item);
+                container.appendChild(item);
+            });
+        }
+        
+        // 물건 선택/해제
+        function toggleObject(obj, element) {
+            if (selectedObjects.includes(obj)) {
+                selectedObjects = selectedObjects.filter(o => o !== obj);
+                element.classList.remove('selected');
+            } else if (selectedObjects.length < 3) {
+                selectedObjects.push(obj);
+                element.classList.add('selected');
+            } else {
+                showAlert('최대 3개까지만 선택할 수 있습니다.', 'warning');
+            }
+        }
+        
+        // 숫자 선택/해제
+        function toggleNumber(num, element) {
+            if (selectedNumbers.includes(num)) {
+                selectedNumbers = selectedNumbers.filter(n => n !== num);
+                element.classList.remove('selected');
+            } else if (selectedNumbers.length < 5) {
+                selectedNumbers.push(num);
+                element.classList.add('selected');
+            } else {
+                showAlert('최대 5개까지만 선택할 수 있습니다.', 'warning');
+            }
+        }
+        
+        // 색상 선택/해제
+        function toggleColor(color, element) {
+            if (selectedColors.includes(color)) {
+                selectedColors = selectedColors.filter(c => c !== color);
+                element.classList.remove('selected');
+            } else if (selectedColors.length < 3) {
+                selectedColors.push(color);
+                element.classList.add('selected');
+            } else {
+                showAlert('최대 3개까지만 선택할 수 있습니다.', 'warning');
+            }
+        }
+        
+        // 커스텀 물건 추가
+        function addCustomObject() {
+            const input = document.getElementById('customObject');
+            const customObj = input.value.trim();
+            
+            if (customObj && !selectedObjects.includes(customObj) && selectedObjects.length < 3) {
+                selectedObjects.push(customObj);
+                
+                const container = document.getElementById('objectTags');
+                const tag = document.createElement('button');
+                tag.className = 'element-tag selected';
+                tag.textContent = customObj;
+                tag.onclick = () => toggleObject(customObj, tag);
+                container.appendChild(tag);
+                
+                input.value = '';
+                showAlert(`'${customObj}'이(가) 추가되었습니다.`, 'success');
+            } else if (selectedObjects.length >= 3) {
+                showAlert('최대 3개까지만 선택할 수 있습니다.', 'warning');
+            }
+        }
+        
+        // 알림 표시
+        function showAlert(message, type) {
+            const alertArea = document.getElementById('alertArea');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            alertArea.appendChild(alertDiv);
+            
+            // 3초 후 자동 제거
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 3000);
+        }
+        
+        // 별자리 예측 생성 (기존 프로젝트 API 사용)
+        async function generateZodiacPrediction() {
+            if (!selectedZodiac) {
+                showAlert('별자리를 먼저 선택해주세요.', 'danger');
+                return;
+            }
+            
+            const btn = document.getElementById('predictBtn');
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            
+            // UI 상태 변경
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>분석 중...';
+            loading.style.display = 'block';
+            result.style.display = 'none';
+            
+            try {
+                // 기존 프로젝트의 별자리 예측 API 호출
+                const response = await fetch('/api/zodiac-predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        zodiac: selectedZodiac,
+                        objects: selectedObjects,
+                        numbers: selectedNumbers,
+                        colors: selectedColors
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayPredictionResult(data.prediction);
+                    showAlert('별자리 행운 번호가 성공적으로 생성되었습니다! ✨', 'success');
+                } else {
+                    showAlert('예측 생성 실패: ' + data.error, 'danger');
+                }
+                
+            } catch (error) {
+                console.error('Zodiac prediction error:', error);
+                showAlert('네트워크 오류가 발생했습니다. 다시 시도해주세요.', 'danger');
+            } finally {
+                // UI 상태 복원
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-magic me-2"></i>별자리 행운 번호 생성하기';
+                loading.style.display = 'none';
+            }
+        }
+        
+        // 예측 결과 표시
+        function displayPredictionResult(prediction) {
+            const result = document.getElementById('result');
+            const numberBalls = document.getElementById('numberBalls');
+            const luckyStory = document.getElementById('luckyStory');
+            const elementAnalysis = document.getElementById('elementAnalysis');
+            const confidenceLevel = document.getElementById('confidenceLevel');
+            const generationTime = document.getElementById('generationTime');
+            
+            // 번호 볼 생성
+            numberBalls.innerHTML = '';
+            prediction.numbers.forEach((number, index) => {
+                const ball = document.createElement('span');
+                ball.className = 'number-ball';
+                ball.textContent = number;
+                ball.style.animationDelay = `${index * 0.2}s`;
+                numberBalls.appendChild(ball);
+            });
+            
+            // 행운 스토리 표시
+            luckyStory.textContent = prediction.lucky_story;
+            
+            // 요소별 분석 표시
+            const analysis = prediction.element_analysis;
+            elementAnalysis.innerHTML = `
+                <div class="mb-2">
+                    <strong>🌟 별자리:</strong> ${prediction.zodiac} (${analysis.zodiac_influence})
+                </div>
+                <div class="mb-2">
+                    <strong>🎁 선택된 물건:</strong> ${analysis.object_count}개
+                </div>
+                <div class="mb-2">
+                    <strong>🔢 선택된 숫자:</strong> ${analysis.number_count}개
+                </div>
+                <div class="mb-2">
+                    <strong>🎨 선택된 색상:</strong> ${analysis.color_count}개
+                </div>
+                <div class="mt-3">
+                    <strong>📊 총 행운 요소:</strong> ${analysis.total_elements}개
+                </div>
+            `;
+            
+            // 신뢰도 및 시간 표시
+            confidenceLevel.textContent = Math.round(prediction.confidence * 100) + '%';
+            generationTime.textContent = new Date(prediction.timestamp).toLocaleString('ko-KR');
+            
+            // 결과 표시
+            result.style.display = 'block';
+            result.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // 엔터 키로 커스텀 물건 추가
+        document.getElementById('customObject').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addCustomObject();
+            }
+        });
+    </script>
+</body>
+</html>

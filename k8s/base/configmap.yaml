@@ -1,0 +1,69 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+data:
+  # Flask 앱 전용 로깅 설정
+  logging.conf: |
+    [loggers]
+    keys=root,lotto.prediction,flask.app
+    
+    [handlers]
+    keys=console,file
+    
+    [formatters]
+    keys=standard
+    
+    [logger_root]
+    level=INFO
+    handlers=console,file
+    
+    [logger_lotto.prediction]
+    level=INFO
+    handlers=console,file
+    propagate=1
+    qualname=lotto.prediction
+    
+    [logger_flask.app]
+    level=INFO
+    handlers=console,file
+    propagate=1
+    qualname=flask.app
+    
+    [handler_console]
+    class=StreamHandler
+    formatter=standard
+    args=(sys.stdout, )
+    
+    [handler_file]
+    class=handlers.RotatingFileHandler
+    formatter=standard
+    args=('/app/logs/lotto_prediction.log', 'a', 10485760, 3)
+    
+    [formatter_standard]
+    format=%(asctime)s - %(name)s - %(levelname)s - %(message)s
+    datefmt=%Y-%m-%d %H:%M:%S
+  
+  # Flask 앱 전용 설정
+  app.properties: |
+    # Flask 애플리케이션 설정
+    FLASK_ENV=production
+    FLASK_DEBUG=false
+    FLASK_HOST=0.0.0.0
+    FLASK_PORT=5000
+    
+    # 로또 예측 설정 (CSV 기반)
+    PREDICTION_COUNT=6
+    MAX_PREDICTION_SETS=100
+    DEFAULT_CONFIDENCE_THRESHOLD=0.6
+    
+    # CSV 데이터 경로
+    DATA_SOURCE=csv
+    CSV_DATA_PATH=/app/data/lotto_results.csv
+    
+    # 파일시스템 캐시
+    CACHE_TYPE=filesystem
+    CACHE_ENABLED=true
+    CACHE_TTL_SECONDS=3600

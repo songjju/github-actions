@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lotto-system
+  labels:
+    name: lotto-system
+    purpose: prediction-service
+    managed-by: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+    description: "CSV 기반 로또 예측 시스템 네임스페이스"

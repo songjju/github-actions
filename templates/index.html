@@ -3,24 +3,51 @@
 {% block title %}로또 예측 시스템 - 홈{% endblock %}
 
 {% block content %}
+<!-- 예측 방식 선택 카드 -->
+<div class="row mb-4">
+    <div class="col-lg-6">
+        <div class="card card-custom h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">
+                    <i class="fas fa-robot text-primary me-2"></i>
+                    AI 기본 예측
+                </h5>
+                <p class="card-text">천재적 통찰 공식을 활용한 고급 AI 분석</p>
+                <div class="alert alert-info mb-3">
+                    <strong>🧠 천재적 통찰 공식</strong>으로 최적의 번호를 분석합니다
+                </div>
+                <button id="predictButton" class="prediction-button" onclick="generatePrediction()">
+                    🎲 AI 예측 번호 생성하기
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card card-custom h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">
+                    <i class="fas fa-star text-warning me-2"></i>
+                    별자리 행운 예측
+                    <span class="badge bg-warning text-dark ms-1">NEW</span>
+                </h5>
+                <p class="card-text">당신의 별자리와 행운의 요소를 결합한 특별한 예측</p>
+                <div class="alert alert-warning mb-3">
+                    별자리 + 행운의 물건 + 숫자 + 색상으로 개인 맞춤형 번호 생성
+                </div>
+                <a href="/zodiac" class="btn btn-gradient-zodiac">
+                    ✨ 별자리 예측 시작하기
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row">
     <!-- 예측 생성 섹션 -->
     <div class="col-lg-8">
         <div class="card card-custom">
             <div class="card-body text-center">
-                <h3 class="card-title mb-4">🎯 로또 번호 예측</h3>
-                
-                <!-- 예측 방법 선택 제거 (천재 공식만 사용) -->
-                <div class="mb-4">
-                    <div class="alert alert-info">
-                        <strong>🧠 천재적 통찰 공식</strong>으로 최적의 번호를 분석합니다
-                    </div>
-                </div>
-                
-                <!-- 예측 버튼 -->
-                <button id="predictButton" class="prediction-button" onclick="generatePrediction()">
-                    🎲 예측 번호 생성하기
-                </button>
+                <h3 class="card-title mb-4">🎯 AI 로또 번호 예측</h3>
                 
                 <!-- 로딩 -->
                 <div id="loading" class="loading">
@@ -51,9 +78,13 @@
                     
                     <!-- 다시 예측하기 버튼 -->
                     <div class="mt-4">
-                        <button class="btn btn-outline-primary" onclick="generatePrediction()">
+                        <button class="btn btn-outline-primary me-2" onclick="generatePrediction()">
                             🔄 다시 예측하기
                         </button>
+                        <a href="/zodiac" class="btn btn-outline-warning">
+                            <i class="fas fa-star me-1"></i>
+                            별자리 예측 체험
+                        </a>
                     </div>
                 </div>
                 
@@ -88,6 +119,33 @@
     
     <!-- 사이드바 정보 -->
     <div class="col-lg-4">
+        <!-- 새로운 기능 소개 -->
+        <div class="card border-warning mb-3">
+            <div class="card-header bg-warning text-dark">
+                <h6 class="mb-0">
+                    <i class="fas fa-sparkles me-2"></i>
+                    새로운 예측 방식
+                </h6>
+            </div>
+            <div class="card-body">
+                <h6 class="card-title">별자리 행운 예측</h6>
+                <p class="card-text small">
+                    당신의 별자리, 행운의 물건, 숫자, 색상을 조합하여 
+                    개인 맞춤형 로또 번호를 생성합니다.
+                </p>
+                <ul class="list-unstyled small mb-3">
+                    <li>✨ 12개 별자리별 맞춤 예측</li>
+                    <li>🎁 행운의 물건 3개 선택</li>
+                    <li>🔢 특별한 숫자 5개 선택</li>
+                    <li>🎨 행운의 색상 3개 선택</li>
+                </ul>
+                <a href="/zodiac" class="btn btn-warning btn-sm w-100">
+                    <i class="fas fa-magic me-1"></i>
+                    지금 체험하기
+                </a>
+            </div>
+        </div>
+        
         <!-- 시스템 정보 -->
         <div class="card card-custom mb-3">
             <div class="card-body">
@@ -125,17 +183,129 @@
         <div class="card card-custom">
             <div class="card-body">
                 <h5 class="card-title">💡 사용법</h5>
-                <ol class="small">
-                    <li>천재적 통찰 공식이 자동으로 적용됩니다</li>
-                    <li>"예측 번호 생성하기" 버튼을 클릭하세요</li>
-                    <li>AI가 분석한 최적의 번호를 확인하세요</li>
-                    <li>예측 기록에서 과거 결과를 볼 수 있습니다</li>
-                    <li><strong>전체 분석 실행</strong>으로 고급 분석 수행</li>
-                </ol>
+                <div class="accordion accordion-flush" id="usageAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#aiUsage">
+                                🤖 AI 기본 예측
+                            </button>
+                        </h2>
+                        <div id="aiUsage" class="accordion-collapse collapse" data-bs-parent="#usageAccordion">
+                            <div class="accordion-body small">
+                                <ol>
+                                    <li>천재적 통찰 공식이 자동으로 적용됩니다</li>
+                                    <li>"AI 예측 번호 생성하기" 버튼을 클릭하세요</li>
+                                    <li>AI가 분석한 최적의 번호를 확인하세요</li>
+                                    <li><strong>전체 분석 실행</strong>으로 고급 분석 수행</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#zodiacUsage">
+                                ⭐ 별자리 행운 예측
+                            </button>
+                        </h2>
+                        <div id="zodiacUsage" class="accordion-collapse collapse" data-bs-parent="#usageAccordion">
+                            <div class="accordion-body small">
+                                <ol>
+                                    <li>당신의 별자리를 선택하세요</li>
+                                    <li>행운의 물건 3개를 골라주세요</li>
+                                    <li>특별한 의미의 숫자 5개를 선택하세요</li>
+                                    <li>행운의 색상 3개를 선택하세요</li>
+                                    <li>AI + 별자리 에너지로 특별한 번호 생성!</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.btn-gradient-zodiac {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    border: none;
+    color: white;
+    padding: 12px 30px;
+    border-radius: 25px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-gradient-zodiac:hover {
+    background: linear-gradient(45deg, #764ba2, #667eea);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    text-decoration: none;
+}
+
+.card-custom {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+}
+
+.card-custom:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+.border-warning {
+    border-color: #ffc107 !important;
+}
+
+.bg-warning {
+    background-color: #ffc107 !important;
+}
+
+.text-dark {
+    color: #212529 !important;
+}
+
+.accordion-button {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: rgba(102, 126, 234, 0.1);
+    color: #667eea;
+}
+
+.accordion-body {
+    padding: 0.75rem 1rem;
+}
+
+@keyframes cardFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card-custom {
+    animation: cardFadeIn 0.6s ease forwards;
+}
+
+.card-custom:nth-child(1) { animation-delay: 0.1s; }
+.card-custom:nth-child(2) { animation-delay: 0.2s; }
+.card-custom:nth-child(3) { animation-delay: 0.3s; }
+</style>
 {% endblock %}
 
 {% block extra_js %}
@@ -195,7 +365,7 @@ async function generatePrediction() {
     } finally {
         // UI 상태 복원
         button.disabled = false;
-        button.innerHTML = '🎲 예측 번호 생성하기';
+        button.innerHTML = '🎲 AI 예측 번호 생성하기';
         hideLoading(loading);
     }
 }
@@ -322,9 +492,101 @@ async function updateRecentPredictions() {
     }
 }
 
-// 페이지 로드 시 최근 예측 업데이트
+// 별자리 소개 모달 (선택사항 - 처음 방문자용)
+function showZodiacIntroModal() {
+    const modalHtml = `
+        <div class="modal fade" id="zodiacIntroModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header bg-gradient-primary text-white">
+                        <h5 class="modal-title">
+                            <i class="fas fa-star me-2"></i>
+                            새로운 기능: 별자리 행운 예측
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-magic text-primary"></i> 어떻게 작동하나요?</h6>
+                                <ul class="list-unstyled">
+                                    <li><i class="fas fa-check text-success me-2"></i>당신의 별자리 선택</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>행운의 물건 3개 선택</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>특별한 숫자 5개 선택</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>행운의 색상 3개 선택</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-sparkles text-warning"></i> 특별한 점</h6>
+                                <ul class="list-unstyled">
+                                    <li><i class="fas fa-star text-warning me-2"></i>기존 AI + 별자리 에너지</li>
+                                    <li><i class="fas fa-heart text-danger me-2"></i>개인 맞춤형 예측</li>
+                                    <li><i class="fas fa-book text-info me-2"></i>행운의 스토리 제공</li>
+                                    <li><i class="fas fa-chart-pie text-success me-2"></i>요소별 영향 분석</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="alert alert-info mt-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            기존 AI 예측 시스템의 정확성과 별자리의 신비로운 에너지를 결합한 새로운 예측 방식입니다.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">나중에</button>
+                        <a href="/zodiac" class="btn btn-gradient-zodiac">
+                            <i class="fas fa-rocket me-1"></i>
+                            지금 체험하기
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // 모달을 body에 추가
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Bootstrap 모달 표시
+    const modal = new bootstrap.Modal(document.getElementById('zodiacIntroModal'));
+    modal.show();
+    
+    // 모달이 닫힌 후 DOM에서 제거
+    document.getElementById('zodiacIntroModal').addEventListener('hidden.bs.modal', function() {
+        this.remove();
+    });
+}
+
+// 처음 방문자를 위한 소개 모달 자동 표시 (선택사항)
+function checkFirstVisitAndShowIntro() {
+    const hasSeenZodiacIntro = localStorage.getItem('hasSeenZodiacIntro');
+    
+    if (!hasSeenZodiacIntro) {
+        setTimeout(() => {
+            showZodiacIntroModal();
+            localStorage.setItem('hasSeenZodiacIntro', 'true');
+        }, 3000); // 3초 후 표시
+    }
+}
+
+// 페이지 로드 시 초기화
 document.addEventListener('DOMContentLoaded', function() {
     updateRecentPredictions();
+    
+    // 카드 애니메이션 초기화
+    const cards = document.querySelectorAll('.card-custom');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            card.style.transition = 'all 0.6s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 150);
+    });
+    
+    // 선택사항: 첫 방문자 소개 모달
+    // checkFirstVisitAndShowIntro();
 });
 </script>
 {% endblock %}

@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: prediction-ingress
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    ingress.kubernetes.io/ssl-redirect: "true"
+    ingress.kubernetes.io/proxy-body-size: "2m"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: traefix
+  tls:
+  - hosts:
+    - lotto-prediction.example.com
+    secretName: lotto-tls-secret
+  rules:
+  - host: lotto-prediction.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: prediction-service
+            port:
+              number: 80

@@ -1,0 +1,93 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: lotto-prediction-base
+  annotations:
+    app.kubernetes.io/name: "lotto-prediction-system"
+    app.kubernetes.io/version: "1.0.0"
+    argocd.argoproj.io/sync-wave: "1"
+
+commonLabels:
+  app: lotto-prediction
+  project: lotto-system
+  component: backend
+  managed-by: argocd
+
+commonAnnotations:
+  app.kubernetes.io/name: "lotto-prediction-system"
+  app.kubernetes.io/component: "prediction-engine"
+  app.kubernetes.io/managed-by: "argocd"
+  argocd.argoproj.io/tracking-id: "lotto-prediction:kustomization.config.k8s.io/Kustomization:lotto-system/lotto-prediction-base"
+
+namespace: lotto-system
+
+namePrefix: lotto-
+
+images:
+- name: lotto-prediction-app
+  newName: ghcr.io/songjju/lotto-predictor
+  newTag: "cache"
+
+resources:
+- namespace.yaml
+- deployment.yaml
+- service.yaml
+- configmap.yaml
+- pvc.yaml
+- ingress.yaml
+- data-init-job.yaml
+
+configMapGenerator:
+- name: app-config
+  files:
+  - config/app.properties
+  - config/logging.conf
+- name: lotto-prediction-config
+  literals:
+  # === Flask 앱 설정 ===
+  - FLASK_APP=app.py
+  - FLASK_ENV=production
+  - PYTHONPATH=/app
+  
+  # === CSV 데이터 경로 (DB 대신) ===
+  - DATA_SOURCE=csv
+  - CSV_DATA_PATH=/app/data/lotto_results.csv
+  - DATA_STORAGE=filesystem
+  - ENABLE_DATABASE=false
+  
+  # === 파일 시스템 경로 ===
+  - DATA_DIR=/app/data
+  - RAW_DATA_DIR=/app/data/raw
+  - PROCESSED_DATA_DIR=/app/data/processed
+  - OUTPUTS_DIR=/app/outputs
+  - CACHE_DIR=/app/cache
+  - LOGS_DIR=/app/logs
+  
+  # === 로또 비즈니스 로직 ===
+  - PREDICTION_COUNT=6
+  - MAX_PREDICTION_SETS=100
+  - DEFAULT_CONFIDENCE_THRESHOLD=0.6
+  
+  # === 파일 기반 캐시 설정 ===
+  - CACHE_TYPE=filesystem
+  - CACHE_ENABLED=true
+  - CACHE_TTL_SECONDS=3600
+  - RESULTS_CACHE_PATH=/app/cache/predictions
+  - STATISTICS_CACHE_PATH=/app/cache/statistics
+  
+  # === 천재 공식 가중치 ===
+  - GENIUS_INSIGHT_WEIGHT=0.20
+  - MULTI_DIMENSIONAL_WEIGHT=0.15
+  - CREATIVE_CONNECTION_WEIGHT=0.12
+  - INTEGRATED_WISDOM_WEIGHT=0.13
+  
+  # === 다양성 보장 ===
+  - MAX_SAME_PREDICTION_STREAK=0
+  - MAX_NUMBER_REPEAT_RATE=0.4
+  - DIVERSITY_ENABLED=true
+  
+  # === 성능 설정 ===
+  - LOG_LEVEL=INFO
+  - MAX_WORKERS=4
+  - ENABLE_METRICS=true
